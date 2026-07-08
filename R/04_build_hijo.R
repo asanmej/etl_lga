@@ -57,10 +57,72 @@ hijo <- hijo %>%
   rename(id_hijo = patient_id, 
          edad_gestacional_nacimiento = edad_gestacional)
 
+# Tabla auxiliar utilizada únicamente durante el proceso ETL para relacionar cada 
+# recién nacido con el embarazo correspondiente. No forma parte del modelo entidad-relación final.
+hijo_aux <- hijo_neosoft %>%
+  select(
+    patient_id,
+    mother_patient_id
+  ) %>%
+  left_join(
+    hijo_demograficos,
+    by = "patient_id"
+  ) %>%
+  rename(
+    id_hijo = patient_id,
+    id_madre = mother_patient_id
+  ) %>%
+  distinct()
+
+
+
+
+# Comprobaciones a ejecutar mañana
+
+## Para ver que no haya duplicados
+hijo_aux %>%
+  count(id_hijo) %>%
+  filter(n > 1)
+
+## Comprobar cuántos hijos tiene cada madre
+hijo_aux %>%
+  count(id_madre)
+
+## Madres con más de un hijo registrado
+hijo_aux %>%
+  count(id_madre) %>%
+  filter(n > 1)
+
+## Mirar algún ejemplo concreto
+hijo_aux %>%
+  filter(id_madre == "XXXX")
+
+# Una vez construida la entidad EMBARAZO, comprobar que la fecha de nacimiento
+# del hijo permite identificar correctamente el embarazo correspondiente.
+# embarazo %>%
+#   filter(id_madre == "XXXX")
+
+## Comprobar que para una misma madre no existan dos hijos nacidos el mismo mes.
+## Porque si aparecen dos eso son gemelos (o trillizos) Y entonces ambos deberán 
+## compartir el mismo id_embarazo
+hijo_aux %>%
+  count(id_madre, fecha_nacimiento) %>%
+  filter(n > 1)
+
+
+
+# join final (primero comprovar todo lo anterior)
+hijo_aux <- hijo_aux %>%
+  left_join(
+    embarazo %>%
+      select(id_embarazo,
+             id_madre,
+             fecha_parto),
+    by = c(
+      "id_madre",
+      "fecha_nacimiento" = "fecha_parto"
+    )
+  )
+
 #View(hijo)
 
-# NOTA:
-# La incorporación de la clave foránea id_embarazo queda pendiente hasta definir
-# el criterio de asociación entre cada recién nacido y su embarazo correspondiente,
-# especialmente en los casos en los que una misma madre pueda tener varios embarazos
-# o partos múltiples (gemelos, trillizos, etc.).
