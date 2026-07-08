@@ -10,15 +10,6 @@ madre_demograficos <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-
 madre_dgp <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv20260616/madre_dgp.csv", 
                         delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
-# madre_dgp tiene este formato: 
-# 	dgp_cd      dgp_st          dgp_dt     result    patient_id
-#    1AA    TABACO (SI/NO)    2015-01-05     S        001
-#    2AA    TABACO (SI/NO)    2015-07-08     S        002
-#   ...     alcohol (SI/NI)
-#   ...     peso (Kg) 
-#   ...     Talla (cm) <- ESTO ES LO QUE NOS INTERESA EL RESTO DE FILAS TANTO POR ARRIBA COMO POR ABAJO NO.
-# eN TALLA LO DE RESULTS ES 160, 165.500, ETC, ES DECIR, QUE SON VARIADOS PERO BUENO, ESTAN EN CENTIMETROS Y BIEN LO UNICO ESO LAS FILAS DE ARIBA Y ABAJO NOS DAN IGUAK 
-
 # Limpieza y estandarización de los datos
 madre_cartilla <- madre_cartilla %>%  
   clean_names() %>% # Convertir a formato estandar: minúsculas, sin tildes ni espacios
@@ -36,7 +27,9 @@ madre_dgp <- madre_dgp %>%
   clean_names() %>%
   distinct()
 
-# Crear la tabla
+# Crontrucción de la entidad MADRE
+
+# Seleccionar las variables demográficas de interés
 madre <- madre_demograficos %>%
   select(
     patient_id,
@@ -47,24 +40,58 @@ madre <- madre_demograficos %>%
   distinct()
 
 # Extraer la talla registrada para cada madre
-talla <- madre_dgp %>%
-  filter(dgp_st == "TALLA") %>%
+
+# Recuperar la talla registrada en DGP utilizando el código específico "TALLA"
+talla_dgp <- madre_dgp %>%
+  filter(str_detect(str_to_upper(dgp_st), "TALLA")) %>%
   mutate(
     result = as.numeric(result)
   ) %>%
   group_by(patient_id) %>%
   summarise(
-    talla = first(na.omit(result)),
+    talla_dgp = first(na.omit(result)),
     .groups = "drop"
   )
 
+# Recuperar la talla registrada en la cartilla de embarazo
+talla_cartilla <- madre_cartilla %>%
+  group_by(patient_id) %>%
+  summarise(
+    talla_cartilla = first(na.omit(talla)),
+    .groups = "drop"
+  )
+
+# Combinar ambas fuentes de información
 madre <- madre %>%
   left_join(
-    talla,
+    talla_dgp,
+    by = "patient_id"
+  ) %>%
+  left_join(
+    talla_cartilla,
     by = "patient_id"
   )
 
-madre <- madre %>% 
-  rename(id_madre = patient_id)
+# Priorizar la talla procedente de DGP y, si no existe, utilizar la de cartilla
+madre <- madre %>%
+  mutate(
+    talla = coalesce(talla_dgp,talla_cartilla)
+  )
 
-View(madre)
+# Conservar únicamente las variables finales y renombrarlas
+madre <- madre %>%
+  select(
+    patient_id,
+    ano_nac,
+    pais_nac,
+    nacionalidad,
+    talla
+  ) %>%
+  distinct()
+
+madre <- madre %>% 
+  rename(id_madre = patient_id,
+         año_nacimiento = ano_nac,
+         pais_nacimiento = pais_nac)
+
+#View(madre)
