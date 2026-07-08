@@ -8,17 +8,27 @@ madre_diag_omi <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)
 madre_diag_cmbd <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv_20240508/madre_diag_cmbd.csv", 
                               delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
+
 # Limpieza de datos
 madre_diag_omi <- madre_diag_omi %>%
   clean_names() %>%
-  distinct()
+  distinct() %>%
+  mutate(
+    diag_dt = as.Date(diag_dt, format="%d/%m/%Y")
+  )
 
 madre_diag_cmbd <- madre_diag_cmbd %>%
   clean_names() %>%
-  distinct()
+  distinct() %>%
+  mutate(
+    fecing = as.Date(fecing, format="%d/%m/%Y")
+  )
 
-# Contar visitas de atención primaria y hospitalarias
+# Cada visita se identifica mediante una fecha distinta para una misma madre.
+# Si existen varios diagnósticos registrados el mismo día, todos ellos se
+# consideran pertenecientes a un único episodio asistencial.
 uso_atencion_primaria <- madre_diag_omi %>%
+  distinct(patient_id, diag_dt) %>%
   group_by(patient_id) %>%
   summarise(
     n_visitas_atencion_primaria = n(),
@@ -26,6 +36,7 @@ uso_atencion_primaria <- madre_diag_omi %>%
   ) 
 
 uso_hospital <- madre_diag_cmbd %>%
+  distinct(patient_id, fecing) %>%
   group_by(patient_id) %>%
   summarise(
     n_visitas_hospitalarias = n(),
@@ -70,11 +81,12 @@ uso_servicio <- uso_servicio %>%
 
 #View(uso_servicio)
 
-# Comprovar si existen varias filas para la misma madre en la misma fecha
-madre_diag_omi %>%
-  count(patient_id, diag_dt) %>%
-  arrange(desc(n))
+# Comprobación para hacer mañana: que no haya duplicados de madre
+uso_servicio %>%
+  count(id_madre) %>%
+  filter(n > 1)
 
-madre_diag_cmbd %>%
-  count(patient_id, diag_dt) %>%
-  arrange(desc(n))
+# Comprobación para hacer mañana: el número de filas debe coincidir con el
+# número de madres distintas
+nrow(uso_servicio)
+n_distinct(uso_servicio$id_madre)
