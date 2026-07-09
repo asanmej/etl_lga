@@ -1,18 +1,23 @@
-
 source("00_config.R")
+source("02_build_embarazo_V3.R")
 
 # Importar la fuente de datos necesaria para construir la entidad SITUACION_ADMIN_MADRE
 madre_demograficos <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv_20240508/madre_demograficos.csv", 
                                  delim = "|", escape_double = FALSE, trim_ws = TRUE)
+
+# Para filtrar madres
+hijo_neosoft <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv_20240508/hijo_neosoft.csv", 
+                           delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
 # Limpieza
 madre_demograficos <- madre_demograficos %>%
   clean_names() %>%
   distinct() %>%
   mutate(
-    altabdu_dt = as.Date(altabdu_dt, format = "%d/%m/%Y"),
-    bajabdu_dt = as.Date(bajabdu_dt, format = "%d/%m/%Y")
-  )
+    altabdu_dt = as.Date(altabdu_dt, format = "%d-%m-%Y"),
+    bajabdu_dt = as.Date(bajabdu_dt, format = "%d-%m-%Y")
+  ) %>%
+  filter(patient_id %in% hijo_neosoft$mother_patient_id)
 
 # Transformar las variables TSI de formato ancho (una columna por año)
 # a formato largo (un registro por madre y año)
@@ -54,19 +59,44 @@ situacion_admin_madre <- tsi %>%
   left_join(
     ind_priv,
     by = c("patient_id", "año")
+  )
+
+# Adaptar los nombres de los atributos a la nomenclatura definida en el modelo E/R
+situacion_admin_madre <- situacion_admin_madre %>% 
+  rename(id_madre = patient_id) %>%
+  mutate(
+    año = as.numeric(año)
+  )
+
+# Empleamos FUR para quedarnos solo con los años que nos interesan mediante una tabla auxiliar
+embarazos_año <- embarazo %>%
+  mutate(
+    año = year(fur),
+    año = case_when(
+      año == 2017 ~ 2018,
+      TRUE ~año
     )
+  ) %>%
+  select(
+    id_madre,
+    fur,
+    año
+  ) %>%
+  distinct()
 
+# Filtrar el histórico administrativo para conservar únicamente los registros
+# correspondientes a los años en los que la madre estuvo embarazada
+situacion_admin_madre <- situacion_admin_madre %>%
+  semi_join(
+    embarazos_año,
+    by = c("id_madre", "año")
+  )
 
-# Generar una clave primaria artificial para identificar de forma única
-# cada registro administrativo
+# Generar una clave primaria para identificar de forma única cada registro administrativo
 situacion_admin_madre <- situacion_admin_madre %>%
   mutate(
     id_admin_madre = row_number()) %>%
   relocate(id_admin_madre)
-
-# Adaptar el identificador a la nomenclatura definida en el modelo E/R
-situacion_admin_madre <- situacion_admin_madre %>% 
-  rename(id_madre = patient_id)
 
 # Ordenar las variables según la estructura definida para la entidad
 situacion_admin_madre <- situacion_admin_madre %>%
@@ -81,12 +111,3 @@ situacion_admin_madre <- situacion_admin_madre %>%
     bajabdu_dt,
     motivo_baja
   )
-
-# NOTA:
-# Esta entidad conserva el histórico completo de la situación administrativa
-# de cada madre. Durante la construcción de la entidad EMBARAZO se seleccionará
-# únicamente el registro correspondiente al año de inicio del embarazo
-# (determinado a partir de la FUR). De este modo, cada embarazo quedará
-# asociado a la situación administrativa vigente en ese momento.
-
-#View(situacion_admin_madre)
