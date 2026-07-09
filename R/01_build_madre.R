@@ -15,8 +15,8 @@ madre_cartilla <- madre_cartilla %>%
   clean_names() %>% # Convertir a formato estandar: minúsculas, sin tildes ni espacios
   distinct() %>% # Eliminar duplicados
   mutate(
-    fecha_visita = as.Date(fecha_visita, format = "%d/%m/%Y"),
-    fur = as.Date(fur, format = "%d/%m/%Y")
+    fecha_visita = as.Date(fecha_visita, format = "%d-%m-%Y"),
+    fur = as.Date(fur, format = "%d-%m-%Y")
   )
 
 madre_demograficos <- madre_demograficos %>%
@@ -33,7 +33,7 @@ madre_dgp <- madre_dgp %>%
 madre <- madre_demograficos %>%
   select(
     patient_id,
-    año_nac,
+    ano_nac,
     pais_nac,
     nacionalidad
   ) %>%
@@ -93,5 +93,3 @@ madre <- madre %>%
   rename(id_madre = patient_id,
          año_nacimiento = ano_nac,
          pais_nacimiento = pais_nac)
-
-#View(madre)
