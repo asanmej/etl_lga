@@ -1,4 +1,3 @@
-
 source("00_config.R")
 
 # Importar los archivos que contienen los diagnósticos registrados para madres e hijos
@@ -13,15 +12,20 @@ madre_diag_cmbd <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol
 hijo_diag_omi <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv_20240508/hijo_diag_omi.csv", 
                             delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
-# Limpieza de los datos
+# Archivo de hijos para filtrar a las madres
+hijo_neosoft <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv_20240508/hijo_neosoft.csv", 
+                           delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
+# Limpieza de los datos
 madre_diag_omi <- madre_diag_omi %>%
   clean_names() %>%
-  distinct()
+  distinct() %>%
+  filter(patient_id %in% hijo_neosoft$mother_patient_id)
 
 madre_diag_cmbd <- madre_diag_cmbd %>%
   clean_names() %>%
-  distinct()
+  distinct() %>%
+  filter(patient_id %in% hijo_neosoft$mother_patient_id)
 
 hijo_diag_omi <- hijo_diag_omi %>%
   clean_names() %>%
@@ -49,10 +53,10 @@ diag_hijo <- hijo_diag_omi %>%
 # Se unifican los diagnósticos procedentes de las distintas fuentes de información
 # en una única entidad, conservando el origen de cada registro.
 diagnostico <- bind_rows(
-                  diag_omi,
-                  diag_cmbd,
-                  diag_hijo
-                  )
+  diag_omi,
+  diag_cmbd,
+  diag_hijo
+)
 
 # Se crea el identificador único de diagnóstico
 diagnostico <- diagnostico %>%
@@ -76,12 +80,10 @@ diagnostico <- diagnostico %>%
          diag_cd,
          diag_st,
          origen
-         )
+  )
 
 # Se estandariza el formato de la fecha
 diagnostico <- diagnostico %>%
   mutate(
-    diag_dt = as.Date(diag_dt, format = "%d/%m/%Y")
+    diag_dt = as.Date(diag_dt, format = "%d-%m-%Y")
   )
-
-#View(diagnostico)
