@@ -17,17 +17,20 @@ madre_cartilla <- madre_cartilla %>%
   mutate(
     fecha_visita = as.Date(fecha_visita, format = "%d-%m-%Y"),
     fur = as.Date(fur, format = "%d-%m-%Y")
-  )
+  )  %>%
+  filter(madre_cartilla$patient_id %in% hijo_neosoft$mother_patient_id)
 
 madre_demograficos <- madre_demograficos %>%
   clean_names() %>%
-  distinct()
+  distinct() %>%
+  filter(madre_demograficos$patient_id %in% hijo_neosoft$mother_patient_id)
 
 madre_dgp <- madre_dgp %>%
   clean_names() %>%
-  distinct()
+  distinct()%>%
+  filter(patient_id %in% hijo_neosoft$mother_patient_id)
 
-# Crontrucción de la entidad MADRE
+# Cronstrucción de la entidad MADRE
 
 # Seleccionar las variables demográficas de interés
 madre <- madre_demograficos %>%
@@ -93,3 +96,4 @@ madre <- madre %>%
   rename(id_madre = patient_id,
          año_nacimiento = ano_nac,
          pais_nacimiento = pais_nac)
+
