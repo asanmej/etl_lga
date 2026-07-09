@@ -1,4 +1,3 @@
-
 source("00_config.R")
 
 # Importar los datos principales de la entidad SITUACION_ADMIN_HIJO
@@ -10,8 +9,8 @@ hijo_demograficos <- hijo_demograficos %>%
   clean_names() %>% 
   distinct() %>% 
   mutate(
-    altabdu_dt = as.Date(altabdu_dt, format = "%d/%m/%Y"),
-    bajabdu_dt = as.Date(bajabdu_dt, format = "%d/%m/%Y")
+    altabdu_dt = as.Date(altabdu_dt, format = "%d-%m-%Y"),
+    bajabdu_dt = as.Date(bajabdu_dt, format = "%d-%m-%Y")
   )
 
 # Crear la clave primaria de la entidad
@@ -39,11 +38,3 @@ situacion_admin_hijo <- situacion_admin_hijo %>%
     bajabdu_dt,
     motivo_baja
   )
-
-#View(situacion_admin_hijo)
-
-
-## EJECUTAR ESTO, SI DA 0, ESTA BIEN HECHO (1:1) PERO SINO HAY QUE CAMBIAR COSAS
-situacion_admin_hijo %>%
-  count(id_hijo) %>%
-  filter(n > 1)
