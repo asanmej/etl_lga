@@ -5,17 +5,17 @@
 
 # 1. Creación de entidades (ETL)
 
-## Lectura de archivos CSV
-library(readr)  
+pkg <- c(
+  
+  ## Manipulación de datos y joins, manejo de fechas y lectura de archivos csv
+  "tidyverse",
+  ## Limpieza de nombres de variables
+  "janitor"
+  
+)
 
-## Manipulación de datos y joins
-library(tidyverse)
-
-## Limpieza de nombres de variables
-library(janitor)
-
-## Manejo de fechas
-library(lubridate)  
+lapply(pkg, function (x){if(!require(x, character.only = T)){install.packages(x , character.only = T)}})
+rm(pkg)
 
 # ---------------------------------------------------------------------------
 
