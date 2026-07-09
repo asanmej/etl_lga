@@ -1,4 +1,3 @@
-
 source("00_config.R")
 
 # Importar los datos principales de la entidad USO_SERVICIO
@@ -8,21 +7,26 @@ madre_diag_omi <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)
 madre_diag_cmbd <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv_20240508/madre_diag_cmbd.csv", 
                               delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
+# Archivo para filtrar las madres
+hijo_neosoft <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv_20240508/hijo_neosoft.csv", 
+                           delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
 # Limpieza de datos
 madre_diag_omi <- madre_diag_omi %>%
   clean_names() %>%
   distinct() %>%
   mutate(
-    diag_dt = as.Date(diag_dt, format="%d/%m/%Y")
-  )
+    diag_dt = as.Date(diag_dt, format="%d-%m-%Y")
+  ) %>%
+  filter(patient_id %in% hijo_neosoft$mother_patient_id)
 
 madre_diag_cmbd <- madre_diag_cmbd %>%
   clean_names() %>%
   distinct() %>%
   mutate(
-    fecing = as.Date(fecing, format="%d/%m/%Y")
-  )
+    fecing = as.Date(fecing, format="%d-%m-%Y")
+  ) %>%
+  filter(patient_id %in% hijo_neosoft$mother_patient_id)
 
 # Cada visita se identifica mediante una fecha distinta para una misma madre.
 # Si existen varios diagnósticos registrados el mismo día, todos ellos se
@@ -78,15 +82,3 @@ uso_servicio <- uso_servicio %>%
     n_visitas_atencion_primaria,
     n_visitas_hospitalarias
   )
-
-#View(uso_servicio)
-
-# Comprobación para hacer mañana: que no haya duplicados de madre
-uso_servicio %>%
-  count(id_madre) %>%
-  filter(n > 1)
-
-# Comprobación para hacer mañana: el número de filas debe coincidir con el
-# número de madres distintas
-nrow(uso_servicio)
-n_distinct(uso_servicio$id_madre)
