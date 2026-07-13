@@ -18,8 +18,8 @@ madre_cartilla <- madre_cartilla %>%
   clean_names() %>% # Convertir a formato estandar: minúsculas, sin tildes ni espacios
   distinct() %>% # Eliminar duplicados
   mutate(
-    fecha_visita = as.Date(fecha_visita, format = "%d-%m-%Y"),
-    fur = as.Date(fur, format = "%d-%m-%Y")
+    fecha_visita = as.Date(fecha_visita, format = "%d/%m/%Y"),
+    fur = as.Date(fur, format = "%d/%m/%Y")
   )  %>%
   filter(patient_id %in% hijo_neosoft$mother_patient_id)
 
@@ -69,10 +69,10 @@ talla_cartilla <- madre_cartilla %>%
   group_by(patient_id) %>%
   summarise(
     talla_cartilla = first(talla),
-    .groups = "drop"
+    .groups="drop"
   )
 
-# Combinar ambas fuentes de información
+# Integrar las tallas procedentes de ambas fuentes de información
 madre <- madre %>%
   left_join(
     talla_dgp,
@@ -83,7 +83,8 @@ madre <- madre %>%
     by = "patient_id"
   )
 
-# Priorizar la talla procedente de DGP y, si no existe, utilizar la de cartilla
+# Cuando una madre dispone de talla en ambas fuentes, se prioriza la registrada
+# en DGP. Si no existe, se utiliza la disponible en la cartilla de embarazo
 madre <- madre %>%
   mutate(
     talla = coalesce(talla_dgp,talla_cartilla)
@@ -97,10 +98,20 @@ madre <- madre %>%
     pais_nac,
     nacionalidad,
     talla
-  ) %>%
-  distinct()
+  )
 
 madre <- madre %>% 
   rename(id_madre = patient_id,
-         año_nacimiento = ano_nac,
+         anio_nacimiento = ano_nac,
          pais_nacimiento = pais_nac)
+
+madre <- madre %>%
+  select(
+    id_madre,
+    anio_nacimiento,
+    pais_nacimiento,
+    nacionalidad,
+    talla
+  )
+
+write_csv(madre, "Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/madre.csv")
