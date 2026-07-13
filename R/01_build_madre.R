@@ -10,6 +10,9 @@ madre_demograficos <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-
 madre_dgp <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv20260616/madre_dgp.csv", 
                         delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
+hijo_neosoft <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv_20240508/hijo_neosoft.csv", 
+                           delim = "|", escape_double = FALSE, trim_ws = TRUE)
+
 # Limpieza y estandarización de los datos
 madre_cartilla <- madre_cartilla %>%  
   clean_names() %>% # Convertir a formato estandar: minúsculas, sin tildes ni espacios
@@ -18,12 +21,12 @@ madre_cartilla <- madre_cartilla %>%
     fecha_visita = as.Date(fecha_visita, format = "%d-%m-%Y"),
     fur = as.Date(fur, format = "%d-%m-%Y")
   )  %>%
-  filter(madre_cartilla$patient_id %in% hijo_neosoft$mother_patient_id)
+  filter(patient_id %in% hijo_neosoft$mother_patient_id)
 
 madre_demograficos <- madre_demograficos %>%
   clean_names() %>%
   distinct() %>%
-  filter(madre_demograficos$patient_id %in% hijo_neosoft$mother_patient_id)
+  filter(patient_id %in% hijo_neosoft$mother_patient_id)
 
 madre_dgp <- madre_dgp %>%
   clean_names() %>%
@@ -50,17 +53,22 @@ talla_dgp <- madre_dgp %>%
   mutate(
     result = as.numeric(result)
   ) %>%
+  filter(between(result, 100, 250)) %>%
   group_by(patient_id) %>%
   summarise(
-    talla_dgp = first(na.omit(result)),
+    talla_dgp = first(result),
     .groups = "drop"
   )
 
 # Recuperar la talla registrada en la cartilla de embarazo
 talla_cartilla <- madre_cartilla %>%
+  mutate(
+    talla = as.numeric(talla)
+  ) %>%
+  filter(between(talla,100,250)) %>%
   group_by(patient_id) %>%
   summarise(
-    talla_cartilla = first(na.omit(talla)),
+    talla_cartilla = first(talla),
     .groups = "drop"
   )
 
@@ -96,4 +104,3 @@ madre <- madre %>%
   rename(id_madre = patient_id,
          año_nacimiento = ano_nac,
          pais_nacimiento = pais_nac)
-
