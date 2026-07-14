@@ -1,5 +1,3 @@
-source("00_config.R")
-
 # Importar la fuente de datos necesaria para construir la entidad SITUACION_ADMIN_MADRE
 madre_demograficos <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv_20240508/madre_demograficos.csv", 
                                  delim = "|", escape_double = FALSE, trim_ws = TRUE)
