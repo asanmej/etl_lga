@@ -1,5 +1,3 @@
-source("00_config.R")
-
 # Importar los datos principales de la entidad MADRE
 madre_cartilla <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv_20240625/madre_cartilla.csv", 
                              delim = "|", escape_double = FALSE, trim_ws = TRUE)
@@ -53,7 +51,7 @@ talla_dgp <- madre_dgp %>%
   mutate(
     result = as.numeric(result)
   ) %>%
-  filter(between(result, 100, 250)) %>%
+  filter(between(result, 100, 210)) %>%
   group_by(patient_id) %>%
   summarise(
     talla_dgp = first(result),
@@ -65,7 +63,7 @@ talla_cartilla <- madre_cartilla %>%
   mutate(
     talla = as.numeric(talla)
   ) %>%
-  filter(between(talla,100,250)) %>%
+  filter(between(talla,100,210)) %>%
   group_by(patient_id) %>%
   summarise(
     talla_cartilla = first(talla),
