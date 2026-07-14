@@ -1,5 +1,3 @@
-source("00_config.R")
-
 # Importar los archivos que contienen los diagnósticos registrados para madres e hijos
 # Diagnósticos de la madre
 madre_diag_omi <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv_20240508/madre_diag_omi.csv", 
@@ -82,8 +80,10 @@ diagnostico <- diagnostico %>%
          origen
   )
 
-# Se estandariza el formato de la fecha
+# Formatear las fechas siguiendo el estándar YYYYMMDD
 diagnostico <- diagnostico %>%
   mutate(
-    diag_dt = as.Date(diag_dt, format = "%d-%m-%Y")
+    diag_dt = format(diag_dt, "%Y%m%d")
   )
+
+write_csv(diagnostico,"Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/diagnostico.csv")
