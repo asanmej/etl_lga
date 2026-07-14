@@ -1,83 +1,19 @@
-source("00_config.R")
-
 # Importar los datos principales de la entidad EMBARZO
-madre_cartilla <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv_20240625/madre_cartilla.csv", 
-                             delim = "|", escape_double = FALSE, trim_ws = TRUE)
-
-hijo_neosoft <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv_20240508/hijo_neosoft.csv", 
-                           delim = "|", escape_double = FALSE, trim_ws = TRUE)
-
-hijo_demograficos <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv20260616/hijo_demograficos.csv", 
-                                delim = "|", escape_double = FALSE, trim_ws = TRUE)
+# Los datos madre_cartilla, hijo_neosoft, hijo_demograficos y los objetos
+# embarazos_aux se generan en el script 03_reconstruccion_embarazos.R
 
 # Para añadir los pesos que falten en madre_cartilla
 madre_dgp <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv20260616/madre_dgp.csv", 
                         delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
-# Limpieza
-hijo_neosoft <- hijo_neosoft %>%
-  clean_names() %>%
-  distinct()
-
-hijo_demograficos <- hijo_demograficos %>%
-  clean_names() %>%
-  distinct()
-
-madre_cartilla <- madre_cartilla %>%
+# Limpieza en el script 03_reconstruccion_embarazos.R
+madre_dgp <- madre_dgp %>%
   clean_names() %>%
   distinct() %>%
   mutate(
-    fur = as.Date(fur, format="%d/%m/%Y"),
-    fecha_visita = as.Date(fecha_visita, format="%d/%m/%Y")
+    dgp_dt = as.Date(dgp_dt, format = "%d/%m/%Y")
   ) %>%
   filter(patient_id %in% hijo_neosoft$mother_patient_id)
-
-# En algunas historias clínicas la FUR únicamente se registra en la primera visita
-# del embarazo. Se propaga este valor al resto de visitas de la misma madre para
-# evitar que un mismo embarazo quede dividido en varios registros.
-madre_cartilla <- madre_cartilla %>%
-  arrange(patient_id, fecha_visita) %>%
-  group_by(patient_id) %>%
-  fill(fur, .direction = "down") %>% 
-  ungroup()
-
-# Para cada combinación madre-FUR se identifica la fecha de la primera visita,
-# que servirá como referencia cuando la FUR no esté disponible
-madre_cartilla <- madre_cartilla %>%
-  arrange(patient_id, fecha_visita) %>%
-  group_by(patient_id, fur) %>%
-  mutate(
-    primera_visita = min(fecha_visita, na.rm = TRUE)
-  ) %>%
-  ungroup()
-
-# Cuando la FUR no está disponible se utiliza la fecha de la primera visita
-# como referencia temporal para identificar cronológicamente el embarazo
-madre_cartilla <- madre_cartilla %>%
-  mutate(
-    fecha_referencia = coalesce(
-      fur,
-      primera_visita
-    )
-  )
-
-# Cada embarazo queda definido por la combinación de la madre y una fecha de
-# referencia (FUR o, cuando esta no existe, la fecha de la primera visita).
-# A partir de esta combinación se genera el identificador del embarazo
-visita_embarazo <- madre_cartilla  %>%
-  arrange(
-    patient_id,
-    fecha_referencia,
-    fecha_visita
-  ) %>%
-  group_by(
-    patient_id,
-    fecha_referencia
-  ) %>%
-  mutate(
-    id_embarazo = cur_group_id(),
-  ) %>%
-  ungroup()
 
 # Funciones auxiliares
 primer_no_na <- function(x){
@@ -105,7 +41,19 @@ ultimo_no_na <- function(x){
 # Se resume toda la información de las visitas en un único registro por embarazo.
 # Para cada atributo se conserva el primer o el último valor registrado según
 # su significado clínico
-embarazo <- visita_embarazo %>%
+embarazo <- madre_cartilla %>%
+  left_join(
+    embarazos_aux %>%
+      select(
+        id_embarazo,
+        id_madre,
+        fecha_referencia
+      ),
+    by = c(
+      "patient_id" = "id_madre",
+      "fecha_referencia"
+    )
+  ) %>%
   group_by(
     id_embarazo,
     patient_id
@@ -123,78 +71,22 @@ embarazo <- visita_embarazo %>%
     embarazos_anteriores = primer_no_na(emb_anteriores),
     abortos_anteriores = primer_no_na(abortos_anteriores),
     nacimientos_anteriores = primer_no_na(nacimientos_anteriores),
-    n_visitas_embarazo = n(),
     primera_visita = first(primera_visita),
     .groups = "drop"
   )
 
-# Los embarazos de una misma madre se ordenan cronológicamente para asociarlos
-# posteriormente con los partos registrados en la información neonatal
-embarazo <- embarazo %>%
-  mutate(
-    fecha_referencia = coalesce(
-      fur,
-      primera_visita
-    )
-  )
-
-# Crear orden embarazo
-embarazo <- embarazo %>%
-  arrange(
-    patient_id,
-    fecha_referencia
-  ) %>%
-  group_by(patient_id) %>%
-  mutate(
-    orden = row_number()
-  ) %>%
-  ungroup()
-
-# Se construye una tabla auxiliar con los partos de cada madre, ordenados
-# cronológicamente, para asociar cada embarazo con su parto correspondiente
-info_parto <- hijo_neosoft %>%
-  select(
-    patient_id,
-    mother_patient_id,
-    tipo_parto
-  ) %>%
-  left_join(
-    hijo_demograficos,
-    by = "patient_id"
-  ) %>%
-  mutate(
-    fecha_parto = as.Date(
-      sprintf("%04d-%02d-01", ano_nac, mes_nac)
-    )
-  ) %>%
-  rename( 
-    id_madre = mother_patient_id
-  ) %>%
-  arrange(
-    id_madre, 
-    fecha_parto
-  ) %>%
-  group_by(id_madre) %>%
-  mutate(
-    orden = row_number()
-  ) %>%
-  ungroup()
-
-# La asociación embarazo-parto se realiza utilizando el orden cronológico de
-# ambos eventos dentro de cada madre
 embarazo <- embarazo %>%
   rename(
     id_madre = patient_id
   ) %>%
   left_join(
-    info_parto %>%
+    embarazos_aux %>%
       select(
-        id_madre,
-        orden,
+        id_embarazo,
         fecha_parto,
         tipo_parto
       ),
-    by = c("id_madre", "orden")
+    by = "id_embarazo"
   )
 
 # Detectar posibles outliers mediante el rango intercuartílico (IQR)
@@ -365,9 +257,7 @@ embarazo <- embarazo %>%
 
 embarazo <- embarazo %>%
   select(
-    -fecha_referencia,
     -primera_visita,
-    -orden,
     -peso_dgp_inicio,
     -peso_dgp_final,
     -peso_inicial_outlier,
