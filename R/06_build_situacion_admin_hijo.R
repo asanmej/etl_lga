@@ -1,6 +1,3 @@
-
-source("00_config.R")
-
 # Importar los datos principales de la entidad SITUACION_ADMIN_HIJO
 hijo_demograficos <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv20260616/hijo_demograficos.csv", 
                                 delim = "|", escape_double = FALSE, trim_ws = TRUE)
