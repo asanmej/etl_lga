@@ -15,6 +15,17 @@ madre_dgp <- madre_dgp %>%
   ) %>%
   filter(patient_id %in% hijo_neosoft$mother_patient_id)
 
+# Creamos una tabla de madres válidas que emplearemos al final para filtrar
+madres_validas <- hijo_neosoft %>%
+  distinct(mother_patient_id) %>%
+  rename(id_madre = mother_patient_id) %>%
+  inner_join(
+    madre_cartilla %>%
+      distinct(patient_id) %>%
+      rename(id_madre = patient_id),
+    by = "id_madre"
+  )
+
 # Funciones auxiliares
 primer_no_na <- function(x){
   
@@ -247,6 +258,10 @@ embarazo <- embarazo %>%
   mutate(
     ganancia_peso = peso_final - peso_inicial
   )
+
+# Filtramos solo las madres que sean válidas y por lo tanto los embarazos válidos
+embarazo <- embarazo %>%
+  semi_join(madres_validas, by = "id_madre")
 
 # Formatear las fechas siguiendo el estándar YYYYMMDD
 embarazo <- embarazo %>%
