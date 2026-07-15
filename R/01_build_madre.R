@@ -33,6 +33,19 @@ madre_dgp <- madre_dgp %>%
 
 # Cronstrucción de la entidad MADRE
 
+# Creamos una tabla de madres válidas que emplearemos al final para filtrar
+# Madres válidas son aquellas que aparecen en madre_cartilla y en hijo_neosoft
+# (intersección de madres en ambos csv)
+madres_validas <- hijo_neosoft %>%
+  distinct(mother_patient_id) %>%
+  rename(id_madre = mother_patient_id) %>%
+  inner_join(
+    madre_cartilla %>%
+      distinct(patient_id) %>%
+      rename(id_madre = patient_id),
+    by = "id_madre"
+  )
+
 # Seleccionar las variables demográficas de interés
 madre <- madre_demograficos %>%
   select(
@@ -103,6 +116,11 @@ madre <- madre %>%
          anio_nacimiento = ano_nac,
          pais_nacimiento = pais_nac)
 
+# Filtramos solo las madres que sean válidas
+madre <- madre %>%
+  semi_join(madres_validas, by = "id_madre")
+
+# Ordenamos las variables
 madre <- madre %>%
   select(
     id_madre,
