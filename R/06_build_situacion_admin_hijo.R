@@ -12,10 +12,17 @@ hijo_demograficos <- hijo_demograficos %>%
   )
 
 # Adaptar los nombres de los atributos a la nomenclatura definida en el modelo E/R
+# y filtramos empleando la entidad HIJO, ya que en Main.R se ha ejecutado primero.
+# Así conseguimos tener los recién nacidos de interés
 situacion_admin_hijo <- hijo_demograficos %>% 
   rename(
     id_hijo = patient_id,
     indice_privacion = ind_privacion
+  ) %>%
+  semi_join(
+    hijo %>%
+      select(id_hijo),
+    by = "id_hijo"
   )
 
 # Generar una clave primaria artificial para identificar de forma única
