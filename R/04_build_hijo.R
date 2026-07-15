@@ -4,6 +4,17 @@
 
 # Limpieza en 03_reconstruccion_embarazos.R
 
+# Creamos una tabla de madres válidas que emplearemos al final para filtrar
+madres_validas <- hijo_neosoft %>%
+  distinct(mother_patient_id) %>%
+  rename(id_madre = mother_patient_id) %>%
+  inner_join(
+    madre_cartilla %>%
+      distinct(patient_id) %>%
+      rename(id_madre = patient_id),
+    by = "id_madre"
+  )
+
 # Seleccionar los atributos principales que definen la entidad HIJO
 hijo <- hijo_neosoft %>%
   select(
@@ -93,6 +104,23 @@ hijo <- hijo %>%
   mutate(
     fecha_nacimiento = format(fecha_nacimiento, "%Y%m%d")
   )
+
+# Filtramos solo las madres que sean válidas y por lo tanto los hijos válidos
+hijo <- hijo %>%
+  left_join(
+    hijo_neosoft %>%
+      select(patient_id, mother_patient_id) %>%
+      rename(
+        id_hijo = patient_id,
+        id_madre = mother_patient_id
+      ),
+    by = "id_hijo"
+  ) %>%
+  semi_join(
+    madres_validas,
+    by = "id_madre"
+  ) %>%
+  select(-id_madre)
 
 # Reordenar variables 
 hijo <- hijo %>%
