@@ -29,6 +29,17 @@ madre_cartilla <- madre_cartilla %>%
   ) %>%
   filter(patient_id %in% hijo_neosoft$mother_patient_id)
 
+# Creamos una tabla de madres válidas que emplearemos al final para filtrar
+madres_validas <- hijo_neosoft %>%
+  distinct(mother_patient_id) %>%
+  rename(id_madre = mother_patient_id) %>%
+  inner_join(
+    madre_cartilla %>%
+      distinct(patient_id) %>%
+      rename(id_madre = patient_id),
+    by = "id_madre"
+  )
+
 # Transformar las variables TSI de formato ancho (una columna por año)
 # a formato largo (un registro por madre y año)
 tsi <- madre_demograficos %>%
@@ -152,6 +163,11 @@ situacion_admin_madre <- situacion_admin_madre %>%
   mutate(
     id_admin_madre = row_number()) %>%
   relocate(id_admin_madre)
+
+# Filtramos solo las madres que sean válidas y por lo tanto las situaciones
+# administrativas válidas
+situacion_admin_madre <- situacion_admin_madre %>%
+  semi_join(madres_validas, by = "id_madre")
 
 # Ordenar las variables según la estructura definida para la entidad
 situacion_admin_madre <- situacion_admin_madre %>%
