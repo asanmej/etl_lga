@@ -1183,3 +1183,140 @@ diagnostico %>%
 ```
 
 ---   
+  
+## 2.7. USO_SERVICIO  
+  
+Cargamos los datos transformados:  
+```{r}
+uso_servicio <- read_csv("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/uso_servicio.csv")
+```  
+  
+### 2.7.1. Estructura de la tabla  
+```{r}
+uso_servicio %>%
+  summarise(
+    filas = n(),
+    columnas = ncol(.)
+  )
+
+glimpse(uso_servicio)
+```  
+  
+### 2.7.2. Valores perdidos (NAs)  
+```{r}
+miss_var_summary(uso_servicio) 
+```  
+  
+### 2.7.3. Resumen descriptivo  
+```{r}
+skim(uso_servicio)
+```  
+  
+### 2.7.4. Clave primaria  
+```{r}
+uso_servicio %>%
+  summarise(
+    registros = n(),
+    id_uso = n_distinct(id_uso_servicio)
+  )
+```  
+
+### 2.7.5. Duplicados  
+```{r}
+sum(duplicated(uso_servicio))
+```  
+  
+### 2.7.6. Variables continuas  
+
+#### Visitas de seguimiento del embarazo
+```{r}
+ggplot(
+  uso_servicio,
+  aes(n_visitas_embarazo)
+) +
+geom_histogram(bins = 30)  
+```  
+  
+#### Visitas en Atención Primaria
+```{r}
+ggplot(
+  uso_servicio,
+  aes(n_visitas_atencion_primaria)
+) +
+geom_histogram(bins = 30)
+```  
+  
+#### Visitas hospitalarias
+```{r}
+ggplot(
+  uso_servicio,
+  aes(n_visitas_hospitalarias)
+) +
+geom_histogram(bins = 30)
+```  
+
+#### Distribución conjunta  
+```{r}
+uso_servicio %>%
+  mutate(
+    cartilla = n_visitas_embarazo > 0,
+    primaria = n_visitas_atencion_primaria > 0,
+    hospital = n_visitas_hospitalarias > 0
+  ) %>%
+  count(cartilla, primaria, hospital)
+```  
+  
+### 2.7.7. Boxplots  
+```{r}
+ggplot(
+  uso_servicio,
+  aes(y = n_visitas_embarazo)
+) +
+  geom_boxplot(width = .25)
+
+ggplot(
+  uso_servicio,
+  aes(y = n_visitas_atencion_primaria)
+) +
+  geom_boxplot(width = .25)
+
+ggplot(
+  uso_servicio,
+  aes(y = n_visitas_hospitalarias)
+) +
+  geom_boxplot(width = .25)
+```
+
+
+### 2.7.8. Consitencias  
+#### Embarazos sin ninguna visita registrada  
+```{r}
+uso_servicio %>%
+filter(
+  n_visitas_embarazo == 0 &
+  n_visitas_atencion_primaria == 0 &
+  n_visitas_hospitalarias == 0
+)
+```  
+  
+#### Número muy elevado de visitas  
+```{r}
+uso_servicio %>%
+filter(
+  n_visitas_embarazo > 25 |
+  n_visitas_atencion_primaria > 50 |
+  n_visitas_hospitalarias > 20
+)
+```  
+  
+#### Visitas negativas
+```{r}
+uso_servicio %>%
+  filter(
+    n_visitas_embarazo < 0 |
+      n_visitas_atencion_primaria < 0 |
+      n_visitas_hospitalarias < 0
+  )
+```  
+  
+---  
