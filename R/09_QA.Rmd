@@ -17,7 +17,7 @@ Cargamos los datos transformados:
 madre <- read_csv("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/madre.csv")
 ```  
   
-### 2.1.1. Estructura de la tabla:  
+### 2.1.1. Estructura de la tabla  
 **Objetivo:** Verificar que la tabla posee el tamaño esperado y que los tipos de datos son coherentes antes de comenzar el análisis.  
 
 ```{r}
@@ -44,7 +44,7 @@ miss_var_summary(madre)
 skim(madre)
 ```  
   
-### 2.1.4. Clave primaria:  
+### 2.1.4. Clave primaria  
 **Objetivo:** Verificar que id_madre identifica unívocamente cada registro.  
 
 ```{r}
@@ -55,14 +55,14 @@ ids_distintos=n_distinct(id_madre)
 )
 ```  
   
-### 2.1.5. Duplicados:  
+### 2.1.5. Duplicados  
 **Objetivo:** Comprobar que no existen filas completamente duplicadas.  
 
 ```{r}
 sum(duplicated(madre))
 ```  
 
-### 2.1.6. Variables categóricas:  
+### 2.1.6. Variables categóricas  
 **Objetivo:** Detectar categorías inesperadas o vacías.  
 
 ```{r}
@@ -74,7 +74,7 @@ mutate(
 arrange(desc(n)) 
 ```  
   
-### 2.1.7. Variables numéricas:  
+### 2.1.7. Variables numéricas  
 **Objetivo:** Inspeccionar visualmente la distribución de la talla.  
 
 ```{r}
@@ -99,7 +99,7 @@ ggplot(
   )
 ```  
   
-### 2.1.8 NORMALIDAD
+### 2.1.8 Normalidad
 **Objetivo:** Evaluar si la distribución de la talla puede aproximarse a una distribución normal.  
 
 ```{r}
@@ -112,7 +112,7 @@ madre %>%
   shapiro.test()
 ```  
   
-### 2.1.9 CONSISTENCIA
+### 2.1.9 Consistencia
 
 #### Talla dentro del rango biológicamente plausible
 ```{r}
@@ -141,15 +141,14 @@ madre %>%
   )
 ```  
   
-### 2.1.10 OUTLIERS
+### 2.1.10 Outliers
 **Objetivo:** Identificar observaciones consideradas atípicas mediante el criterio IQR. (Estos valores no necesariamente representan errores de calidad)  
 
 ```{r}
-boxplot.stats(madre$talla)$out |>
-  length()
+boxplot.stats(madre$talla)$out |> length()
 ```  
   
-### 2.1.11 QQ-PLOT
+### 2.1.11 QQ-plot
 **Objetivo:** Inspección visual de la normalidad.  
 ```{r}
 ggplot(
@@ -159,6 +158,397 @@ ggplot(
   stat_qq() +
   stat_qq_line()
 ```
+
+---  
+  
+## 2.2. EMBARAZO  
+  
+Cargamos los datos transformados:  
+```{r}
+embarazo <- read_csv("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/embarazo.csv")
+```  
+  
+### 2.2.1. Estructura de la tabla  
+```{r}
+embarazo %>%
+  summarise(
+    filas = n(),
+    columnas = ncol(.)
+  )
+
+glimpse(embarazo)
+```  
+  
+### 2.2.2. Valores perdidos (NA)  
+```{r}
+miss_var_summary(embarazo)
+```   
+  
+### 2.2.3. Resumen  
+```{r}
+skim(embarazo)
+```  
+  
+### 2.2.4. Clave primaria  
+```{r}
+embarazo %>%
+  summarise(
+    total_registros = n(),
+    ids_distintos = n_distinct(id_embarazo)
+  )
+```  
+  
+### 2.2.5. Duplicados  
+```{r}
+sum(duplicated(embarazo))
+```  
+  
+### 2.2.6. Variables categóricas  
+  
+#### Tipo de parto  
+```{r}
+embarazo %>%
+  count(tipo_parto) %>%
+  mutate(
+    porcentaje = round(
+      100 * n / sum(n),
+      2
+    )
+  )
+```  
+  
+#### Consumo de tabaco
+```{r}
+embarazo %>%
+  count(consumo_tabaco) %>%
+  mutate(
+    porcentaje = round(
+      100 * n / sum(n),
+      2
+    )
+  )
+```  
+  
+#### Consumo de alcohol  
+```{r}
+embarazo %>%
+  count(consumo_alcohol) %>%
+  mutate(
+    porcentaje = round(
+      100 * n / sum(n),
+      2
+    )
+  )
+```  
+  
+### 2.2.7. Variables contínuas  
+  
+#### Edad
+```{r}
+ggplot(
+  embarazo,
+  aes(edad)
+) +
+  geom_histogram(
+    bins = 30
+  )
+```  
+  
+#### IMC inicial
+```{r}
+ggplot(
+  embarazo,
+  aes(imc_inicial)
+) +
+  geom_histogram(
+    bins = 30
+  ) 
+```  
+  
+#### Peso inicial
+```{r}
+ggplot(
+  embarazo,
+  aes(peso_inicial)
+) +
+  geom_histogram(
+    bins = 30
+  )
+```  
+  
+#### Peso final
+```{r}
+ggplot(
+  embarazo,
+  aes(peso_final)
+) +
+  geom_histogram(
+    bins = 30
+  )
+```  
+  
+#### Ganancia de peso
+```{r}
+ggplot(
+  embarazo,
+  aes(ganancia_peso)
+) +
+  geom_histogram(
+    bins = 30
+  )
+```  
+  
+### 2.2.7. Boxplots
+```{r}
+ggplot(
+  embarazo,
+  aes(y = edad)
+) +
+  geom_boxplot(width = .25)
+
+
+ggplot(
+  embarazo,
+  aes(y = imc_inicial)
+) +
+  geom_boxplot(width = .25)
+
+
+ggplot(
+  embarazo,
+  aes(y = peso_inicial)
+) +
+  geom_boxplot(width = .25)
+
+
+ggplot(
+  embarazo,
+  aes(y = peso_final)
+) +
+  geom_boxplot(width = .25)
+
+
+ggplot(
+  embarazo,
+  aes(y = ganancia_peso)
+) +
+  geom_boxplot(width = .25)
+```  
+  
+### 2.2.8. Normalidad  
+Sólo para Edad e IMC inicial.  
+```{r}
+set.seed(123)
+
+# Edad
+embarazo %>%
+  filter(!is.na(edad)) %>%
+  slice_sample(
+    n = min(
+      5000,
+      n()
+    )
+  ) %>%
+  pull(edad) %>%
+  shapiro.test()
+
+ggplot(
+  embarazo,
+  aes(sample = edad)
+) +
+  stat_qq() +
+  stat_qq_line()
+
+# IMC inicial
+embarazo %>%
+  filter(!is.na(imc_inicial)) %>%
+  slice_sample(
+    n = min(
+      5000,
+      n()
+    )
+  ) %>%
+  pull(imc_inicial) %>%
+  shapiro.test()
+
+ggplot(
+  embarazo,
+  aes(sample = imc_inicial)
+) +
+  stat_qq() +
+  stat_qq_line()
+```  
+  
+### 2.2.10 Consistencia  
+  
+#### Peso final mayor o igual al peso inicial
+```{r}
+embarazo %>%
+  filter(
+    peso_final < peso_inicial
+  )
+```  
+  
+#### Ganancia de peso correctamente calculada
+```{r}
+embarazo %>%
+  filter(
+    abs(
+      ganancia_peso -
+        (peso_final - peso_inicial)
+    ) > 0.01
+  )
+```  
+  
+#### Edad materna plausible
+```{r}
+embarazo %>%
+  filter(
+    edad < 12 |
+      edad > 50
+  )
+```  
+  
+### IMC inicial plausible
+```{r}
+embarazo %>%
+  filter(
+    imc_inicial < 14 |
+      imc_inicial > 45
+  )
+```  
+  
+#### IMC final plausible
+```{r}
+embarazo %>%
+  filter(
+    imc_final < 14 |
+      imc_final > 45
+  )
+```  
+  
+#### Abortos superiores al número de embarazos
+```{r}
+embarazo %>%
+  filter(
+    abortos_anteriores >
+      embarazos_anteriores
+  )
+```  
+  
+#### Nacimientos superiores al número de embarazos
+```{r}
+embarazo %>%
+  filter(
+    nacimientos_anteriores >
+      embarazos_anteriores
+  )
+```  
+  
+### 2.2.11 Fechas  
+  
+```{r}
+embarazo_fechas <-
+  embarazo %>%
+  mutate(
+    fur = as.Date(
+      as.character(fur),
+      "%Y%m%d"
+    ),
+    fecha_parto = as.Date(
+      as.character(fecha_parto),
+      "%Y%m%d"
+    )
+  )
+```  
+  
+#### FUR posterior al parto
+```{r}
+embarazo_fechas %>%
+  filter(
+    !is.na(fur),
+    !is.na(fecha_parto),
+    fur > fecha_parto
+  )
+```  
+  
+#### Duración del embarazo
+```{r}
+embarazo_fechas %>%
+  mutate(
+    dias_embarazo =
+      as.numeric(
+        fecha_parto - fur
+      )
+  ) %>%
+  summarise(
+    minimo = min(
+      dias_embarazo,
+      na.rm = TRUE
+    ),
+    media = mean(
+      dias_embarazo,
+      na.rm = TRUE
+    ),
+    mediana = median(
+      dias_embarazo,
+      na.rm = TRUE
+    ),
+    maximo = max(
+      dias_embarazo,
+      na.rm = TRUE
+    )
+  )
+
+
+ggplot(
+  embarazo_fechas %>%
+    mutate(
+      dias_embarazo =
+        as.numeric(
+          fecha_parto - fur
+        )
+    ),
+  aes(dias_embarazo)
+) +
+  geom_histogram(
+    bins = 30
+  )
+```  
+  
+#### Gestaciones con duración implausible
+```{r}
+embarazo_fechas %>%
+  mutate(
+    dias_embarazo =
+      as.numeric(
+        fecha_parto - fur
+      )
+  ) %>%
+  filter(
+    dias_embarazo < 180 |
+      dias_embarazo > 320
+  )
+```  
+  
+### 2.2.12 Outliers
+```{r}
+boxplot.stats(embarazo$edad)$out |> length()
+
+boxplot.stats(embarazo$imc_inicial)$out |>length()
+
+boxplot.stats(embarazo$peso_inicial)$out |> length()
+
+boxplot.stats(embarazo$peso_final)$out |> length()
+
+boxplot.stats(embarazo$ganancia_peso)$out |> length()
+```  
+  
+---  
+  
+
+
+
 
 
 
