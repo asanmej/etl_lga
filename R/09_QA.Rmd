@@ -1,0 +1,172 @@
+---
+title: "Control de calidad de los datos transformados"
+author: "Inés García de la Peña Marco"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---  
+  
+# 2. QA de cada entidad  
+  
+## 2.1. MADRE  
+  
+Cargamos los datos transformados:  
+```{r}
+madre <- read_csv("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/madre.csv")
+```  
+  
+### 2.1.1. Estructura de la tabla:  
+**Objetivo:** Verificar que la tabla posee el tamaño esperado y que los tipos de datos son coherentes antes de comenzar el análisis.  
+
+```{r}
+madre %>%
+  summarise(
+    filas = n(),
+    columnas = ncol(.)
+  )
+
+glimpse(madre)
+```  
+  
+### 2.1.2 Valores perdidos (NAs)  
+**Objetivo:** Identificar variables con información ausente.  
+
+```{r}
+miss_var_summary(madre)
+```  
+  
+### 2.1.3. Resumen  
+**Objetivo:** Obtener un resumen rápido de todas las variables.  
+
+```{r}
+skim(madre)
+```  
+  
+### 2.1.4. Clave primaria:  
+**Objetivo:** Verificar que id_madre identifica unívocamente cada registro.  
+
+```{r}
+madre %>%
+summarise(
+total=n(),
+ids_distintos=n_distinct(id_madre)
+)
+```  
+  
+### 2.1.5. Duplicados:  
+**Objetivo:** Comprobar que no existen filas completamente duplicadas.  
+
+```{r}
+sum(duplicated(madre))
+```  
+
+### 2.1.6. Variables categóricas:  
+**Objetivo:** Detectar categorías inesperadas o vacías.  
+
+```{r}
+madre %>%
+count(nacionalidad) %>%
+mutate(
+  porcentaje = round(100*n/sum(n),2)
+) %>%
+arrange(desc(n)) 
+```  
+  
+### 2.1.7. Variables numéricas:  
+**Objetivo:** Inspeccionar visualmente la distribución de la talla.  
+
+```{r}
+ggplot(
+  madre,
+  aes(talla)
+) +
+  geom_histogram(bins = 30) +
+  labs(
+    x = "Talla (cm)",
+    y = "Frecuencia"
+  )
+
+
+ggplot(
+  madre,
+  aes(y = talla)
+) +
+  geom_boxplot(width = .25) +
+  labs(
+    y = "Talla (cm)"
+  )
+```  
+  
+### 2.1.8 NORMALIDAD
+**Objetivo:** Evaluar si la distribución de la talla puede aproximarse a una distribución normal.  
+
+```{r}
+set.seed(123)
+
+madre %>%
+  filter(!is.na(talla)) %>%
+  slice_sample(n = min(5000, n())) %>%
+  pull(talla) %>%
+  shapiro.test()
+```  
+  
+### 2.1.9 CONSISTENCIA
+
+#### Talla dentro del rango biológicamente plausible
+```{r}
+madre %>%
+  filter(
+    talla < 100 |
+    talla > 210
+  )
+```  
+  
+#### Año de nacimiento plausible
+```{r}
+madre %>%
+  filter(
+    anio_nacimiento < 1930 |
+    anio_nacimiento > 2011
+  )
+```  
+  
+#### Nacionalidad informada
+```{r}
+madre %>%
+  filter(
+    is.na(nacionalidad) |
+      nacionalidad == ""
+  )
+```  
+  
+### 2.1.10 OUTLIERS
+**Objetivo:** Identificar observaciones consideradas atípicas mediante el criterio IQR. (Estos valores no necesariamente representan errores de calidad)  
+
+```{r}
+boxplot.stats(madre$talla)$out |>
+  length()
+```  
+  
+### 2.1.11 QQ-PLOT
+**Objetivo:** Inspección visual de la normalidad.  
+```{r}
+ggplot(
+  madre,
+  aes(sample = talla)
+) +
+  stat_qq() +
+  stat_qq_line()
+```
+
+
+
+
+
+
+
+
+
+
+
