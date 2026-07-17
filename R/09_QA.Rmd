@@ -874,7 +874,7 @@ situacion_admin_madre %>%
 situacion_admin_madre %>%
   filter(
     is.na(zbs) |
-      cod_aportacion_farmacia == ""
+      zbs == ""
   )
 ```  
   
@@ -883,7 +883,7 @@ situacion_admin_madre %>%
 situacion_admin_madre %>%
   filter(
     is.na(indice_privacion) |
-      cod_aportacion_farmacia == ""
+      indice_privacion == ""
   )
 ```  
   
@@ -916,19 +916,104 @@ situacion_admin_madre %>%
   
 ---  
   
+## 2.5. SITUACION_ADMIN_HIJO  
+  
+Cargamos los datos transformados:  
+```{r}
+situacion_admin_hijo <- read_csv("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/situacion_admin_hijo.csv")
+```  
+  
+### 2.5.1. Estructura de la tabla  
+```{r}
+situacion_admin_hijo %>%
+  summarise(
+    filas = n(),
+    columnas = ncol(.)
+  )
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+glimpse(situacion_admin_hijo)
+```  
+  
+### 2.5.2. Valores perdidos (NA)  
+```{r}
+miss_var_summary(situacion_admin_hijo)
+```  
+  
+### 2.5.3. Resumen descriptivo  
+```{r}
+skim(situacion_admin_hijo)
+```  
+  
+### 2.5.4. Clave primaria  
+```{r}
+situacion_admin_hijo %>%
+  summarise(
+    total = n(),
+    ids_distintos = n_distinct(id_admin_hijo)
+)
+```  
+  
+### 2.5.5. Duplicados  
+```{r}
+sum(duplicated(situacion_admin_hijo))
+```  
+  
+### 2.5.6. Variables categóricas  
+  
+#### TSI
+```{r}
+situacion_admin_hijo %>%
+  count(tsi, sort=TRUE) %>%
+  mutate(
+    porcentaje = round(100*n/sum(n),2)
+)
+```  
+  
+#### ZBS  
+```{r}
+situacion_admin_hijo %>%
+  count(zbs,sort=TRUE) %>%
+  mutate(
+    porcentaje = round(100*n/sum(n),2)
+)
+```  
+  
+### 2.5.7. Consistencia  
+  
+#### TSI vacío  
+```{r}
+situacion_admin_hijo %>%
+  filter(
+    is.na(tsi) |
+      tsi == ""
+  )
+```  
+  
+#### ZBS  
+```{r}
+situacion_admin_hijo %>%
+  filter(
+    is.na(zbs) |
+      zbs == ""
+  )
+```  
+  
+#### Índice de privación  
+```{r}
+situacion_admin_hijo %>%
+  filter(
+    is.na(indice_privacion) |
+      indice_privacion == ""
+  )
+```  
+  
+### 2.5.9. Un registro administrativo por hijo
+```{r}
+situacion_admin_hijo %>%
+count(id_hijo) %>%
+filter(n > 1)
+```
+  
+---  
+  
 
