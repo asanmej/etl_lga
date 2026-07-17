@@ -1016,4 +1016,170 @@ filter(n > 1)
   
 ---  
   
+## 2.6. DIAGNOSTICO  
+  
+Cargamos los datos transformados:  
+```{r}
+diagnostico <- read_csv("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/diagnostico.csv")
+```  
+  
+### 2.6.1. Estructura de la tabla  
+```{r}
+diagnostico %>%
+  summarise(
+    filas = n(),
+    columnas = ncol(.)
+  )
 
+glimpse(diagnostico)
+```  
+  
+### 2.6.2. Datos perdidos  
+```{r}
+miss_var_summary(diagnostico)
+```   
+  
+### 2.6.3. Resumen descriptivo  
+```{r}
+skim(diagnostico)
+```  
+  
+### 2.6.4. Clave primaria  
+```{r}
+diagnostico %>%
+  summarise(
+    total=n(),
+    ids_distintos = n_distinct(id_diagnostico)
+  )
+```
+
+### 2.6.5. Duplicados  
+```{r}
+sum(duplicated(diagnostico))
+```   
+  
+### 2.6.6. Distribución de variables categóricas   
+  
+#### Por tipo de paciente
+```{r}
+diagnostico %>%
+  count(tipo_paciente) %>%
+  mutate(
+    porcentaje = round(100 * n / sum(n), 2)
+  )
+```  
+  
+#### Por origen de los datos (fuente)  
+```{r}
+diagnostico %>%
+  count(origen) %>%
+  mutate(
+    porcentaje = round(100 * n / sum(n), 2)
+  )
+```  
+  
+#### Cruce entre tipo de paciente y origen  
+```{r}
+# Para comprobar que únicamente existen las combinaciones esperadas (Madre -> OMI, Madre -> CMBD e Hijo -> OMI) 
+diagnostico %>%
+  count(tipo_paciente, origen)
+
+ggplot(diagnostico,
+       aes(origen,
+           fill = tipo_paciente))+
+geom_bar(position="dodge")
+```  
+  
+### 2.6.7. Fechas
+```{r}
+diagnostico %>%
+  mutate(
+    diag_dt = as.Date(
+      as.character(diag_dt),
+      "%Y%m%d"
+    )
+  ) %>%
+  summarise(
+    fecha_minima = min(
+      diag_dt,
+      na.rm = TRUE
+    ),
+    fecha_maxima = max(
+      diag_dt,
+      na.rm = TRUE
+    )
+  )
+
+ggplot(
+  diagnostico %>%
+    mutate(
+      diag_dt = as.Date(
+        as.character(diag_dt),
+        "%Y%m%d"
+      )
+    ),
+  aes(diag_dt)
+) +
+  geom_histogram(
+    bins = 50
+  )
+```  
+  
+### 2.6.8. Consistencia  
+  
+#### Fuente  
+```{r}
+diagnostico %>%
+  filter(
+    is.na(fuente) |
+      fuente == ""
+  )
+```  
+  
+#### Código diagnóstico
+```{r}
+diagnostico %>%
+  filter(
+    is.na(diag_cd) |
+      diag_cd == ""
+  )
+```  
+  
+#### Diagnósticos duplicados
+**Objetivo:** Detectar diagnósticos repetidos para un mismo paciente el mismo día.  
+Se excluyen los diagnósticos sin fecha ya que podrían corresponder a episodios diferentes.
+```{r}
+diagnostico %>%
+  filter(
+    !is.na(diag_dt)
+  ) %>%
+  count(
+    id_paciente,
+    diag_dt,
+    diag_cd
+  ) %>%
+  filter(
+    n > 1
+  )
+```  
+  
+### 2.6.9. Outliers temporales
+**Objetivo:** Detectar registros fuera del periodo de estudio.
+```{r}
+diagnostico %>%
+  mutate(
+    diag_dt = as.Date(
+      as.character(diag_dt),
+      "%Y%m%d"
+    )
+  ) %>%
+  filter(
+    !is.na(diag_dt),
+    (
+      lubridate::year(diag_dt) < 2017 |
+      lubridate::year(diag_dt) > 2024
+    )
+  )
+```
+
+---   
