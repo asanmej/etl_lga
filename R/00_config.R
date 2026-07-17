@@ -13,7 +13,9 @@ pkg <- c(
   ## Resúmenes descriptivos y calidad de datos
   "skimr",
   ## Valores perdidos (NAs)
-  "naniar"
+  "naniar",
+  ## Manejo de fechas
+  "lubridate"
   
   # 3. Análisis descriptivo
   
