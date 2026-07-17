@@ -546,6 +546,246 @@ boxplot.stats(embarazo$ganancia_peso)$out |> length()
   
 ---  
   
+## 2.3. HIJO  
+  
+Cargamos los datos transformados:  
+```{r}
+hijo <- read_csv("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/hijo.csv")
+```  
+  
+### 2.3.1. Estructura de la tabla  
+```{r}
+hijo %>%
+  summarise(
+    filas = n(),
+    columnas = ncol(.)
+  )
+
+glimpse(hijo)
+```  
+  
+### 2.3.2. Valores perdidos (NAs) 
+```{r}
+miss_var_summary(hijo) 
+```  
+  
+### 2.3.3. Resumen  
+```{r}
+skim(hijo) 
+```  
+  
+### 2.3.4. Clave primaria  
+```{r}
+hijo %>%
+  summarise(
+    total=n(),
+    ids_distintos=n_distinct(id_hijo)
+    )
+```  
+  
+### 2.3.5. Duplicados  
+```{r}
+sum(duplicated(hijo))
+```  
+
+### 2.3.6. Variables categóricas  
+  
+#### Malformaciones
+```{r}
+hijo %>%
+  count(malformation_cd) %>%
+  mutate(
+    porcentaje = round(100*n/sum(n),2)
+    )
+```  
+  
+#### Muerte neonatal  
+```{r}
+hijo %>%
+  count(muerte_neonatal) %>%
+  mutate(
+    porcentaje = round(100*n/sum(n),2)
+    )
+```  
+  
+### 2.3.7. Variables continuas  
+  
+#### Peso nacimiento
+```{r}
+ggplot(hijo,
+       aes(peso_nacimiento))+
+  geom_histogram(bins=30)
+```  
+  
+#### Talla  
+```{r}
+ggplot(hijo,
+       aes(talla_nacimiento))+
+  geom_histogram(bins=30)
+```  
+  
+#### Perímetro craneal
+```{r}
+ggplot(hijo,
+       aes(perimetro_craneal))+
+  geom_histogram(bins=30)
+```  
+  
+#### Edad gestacional  
+```{r}
+ggplot(hijo, 
+       aes(edad_gestacional_nacimiento)) +
+  geom_histogram(bins = 30)
+```
+
+  
+### 2.3.8. Boxplots  
+```{r}
+ggplot(hijo,
+       aes(y=peso_nacimiento))+
+  geom_boxplot(width=.25)
+
+ggplot(hijo,
+       aes(y=talla_nacimiento))+
+  geom_boxplot(width=.25)
+
+ggplot(hijo,
+       aes(y=perimetro_craneal))+
+  geom_boxplot(width=.25)  
+  
+ggplot(hijo,
+       aes(y = edad_gestacional_nacimiento)) +
+  geom_boxplot(width = .25)
+```  
+  
+### 2.3.9. Normalidad  
+```{r}
+## Peso al nacimiento
+set.seed(123)
+
+hijo %>%
+  filter(!is.na(peso_nacimiento)) %>%
+  slice_sample(
+    n = min(5000,n())
+  ) %>%
+  pull(peso_nacimiento) %>%
+  shapiro.test()
+
+ggplot(
+  hijo,
+  aes(sample = peso_nacimiento)) +
+  stat_qq() +
+  stat_qq_line()
+```  
+  
+### 2.3.10. Consistencia  
+  
+#### Peso al nacimiento plausible
+```{r}
+hijo %>%
+  filter(
+    peso_nacimiento < 300 |
+      peso_nacimiento > 5300
+)
+```  
+  
+#### Talla plausible
+```{r}
+hijo %>%
+  filter(
+    talla_nacimiento < 20 |
+    talla_nacimiento > 70
+)
+```  
+  
+#### Perímetro craneal plausible
+```{r}
+hijo %>%
+  filter(
+    perimetro_craneal < 20 |
+    perimetro_craneal > 50
+)
+```  
+  
+#### Edad gestacional plausible
+```{r}
+hijo %>%
+  filter(
+    edad_gestacional_nacimiento < 20 |
+    edad_gestacional_nacimiento > 45
+)
+
+hijo %>%
+  filter(
+    edad_gestacional_nacimiento >= 37 &
+    peso_nacimiento < 1000
+)
+
+hijo %>%
+  filter(
+    edad_gestacional_nacimiento < 28 &
+    peso_nacimiento > 3000
+)
+```  
+  
+#### Malformaciones vacías  
+```{r}
+hijo %>%
+  filter(
+    malformation_cd == ""
+  )
+```  
+  
+### 2.3.11. Fechas  
+```{r}
+hijo %>%
+  mutate(
+    fecha_nacimiento =
+      as.Date(
+        as.character(fecha_nacimiento),
+        "%Y%m%d"
+      )
+  ) %>%
+  summarise(
+    fecha_minima = min(
+      fecha_nacimiento,
+      na.rm = TRUE
+    ),
+    fecha_maxima = max(
+      fecha_nacimiento,
+      na.rm = TRUE
+    )
+  )
+
+
+ggplot(
+  hijo %>%
+    mutate(
+      fecha_nacimiento =
+        as.Date(
+          as.character(fecha_nacimiento),
+          "%Y%m%d"
+        )
+    ),
+  aes(fecha_nacimiento)
+) +
+  geom_histogram(
+    bins = 50
+  )
+```  
+  
+### 2.3.12. Outliers  
+```{r}
+boxplot.stats(hijo$peso_nacimiento)$out |> length()
+
+boxplot.stats(hijo$talla_nacimiento)$out |>length()
+
+boxplot.stats(hijo$perimetro_craneal)$out |> length()
+
+boxplot.stats(hijo$edad_gestacional_nacimiento)$out |> length()
+```  
+  
+---
 
 
 
