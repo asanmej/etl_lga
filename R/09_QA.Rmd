@@ -785,7 +785,139 @@ boxplot.stats(hijo$perimetro_craneal)$out |> length()
 boxplot.stats(hijo$edad_gestacional_nacimiento)$out |> length()
 ```  
   
----
+---  
+  
+## 2.4. SITUACION_ADMIN_MADRE  
+  
+Cargamos los datos transformados:  
+```{r}
+situacion_admin_madre <- read_csv("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/situacion_admin_madre.csv")
+```  
+  
+### 2.4.1. Estructura de la tabla  
+```{r}
+situacion_admin_madre %>%
+  summarise(
+    filas = n(),
+    columnas = ncol(.)
+  )
+
+glimpse(situacion_admin_madre)
+```  
+  
+### 2.4.2. Datos perdidos (NAs)  
+```{r}
+miss_var_summary(situacion_admin_madre) 
+```    
+
+### 2.4.3. Resumen  
+```{r}
+skim(situacion_admin_madre) 
+```  
+  
+### 2.4.4. Clave primaria  
+```{r}
+situacion_admin_madre %>%
+  summarise(
+    total=n(),
+    ids_distintos=n_distinct(id_admin_madre)
+  )
+```   
+  
+### 2.4.5. Duplicados  
+```{r}
+sum(duplicated(situacion_admin_madre))
+```  
+  
+### 2.4.6. Variables categóricas  
+  
+#### TSI
+```{r}
+situacion_admin_madre %>%
+  count(tsi, sort=TRUE) %>%
+  mutate(
+    porcentaje = round(100*n/sum(n),2)
+  )
+```  
+
+####  ZBS  
+```{r}
+situacion_admin_madre %>%
+  count(zbs, sort=TRUE)	%>%
+  mutate(
+    porcentaje = round(100*n/sum(n),2)
+  )
+```  
+  
+### 2.4.7. Consistencia  
+  
+#### Año administrativo
+```{r}
+situacion_admin_madre %>%
+  filter(
+    anio < 2018 |
+    anio > 2023
+  )
+```  
+  
+#### TSI vacío  
+```{r}
+situacion_admin_madre %>%
+  filter(
+    is.na(tsi) |
+      tsi == ""
+  )
+```  
+  
+#### ZBS  
+```{r}
+situacion_admin_madre %>%
+  filter(
+    is.na(zbs) |
+      cod_aportacion_farmacia == ""
+  )
+```  
+  
+#### Índice de privación  
+```{r}
+situacion_admin_madre %>%
+  filter(
+    is.na(indice_privacion) |
+      cod_aportacion_farmacia == ""
+  )
+```  
+  
+### 2.4.8. Un registro por madre y año  
+**Objetivo:** Verificar que una madre no presenta más de un registro administrativo para un mismo año.
+```{r}
+situacion_admin_madre %>%
+  count(
+    id_madre,
+    anio
+  ) %>%
+  filter(n > 1)
+```  
+  
+### 2.4.9 Fechas
+**Objetivo:** Comprobar el intervalo temporal cubierto por la entidad.  
+```{r}
+situacion_admin_madre %>%
+  summarise(
+    primer_anio = min(
+      anio,
+      na.rm = TRUE
+    ),
+    ultimo_anio = max(
+      anio,
+      na.rm = TRUE
+    )
+  )
+```  
+  
+---  
+  
+
+
 
 
 
