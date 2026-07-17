@@ -7,7 +7,11 @@ output:
     toc: true
     toc_float: true
 ---  
-  
+# 1. Importación de librerias  
+```{r}
+source("00_config.R")
+```
+
 # 2. QA de cada entidad  
   
 ## 2.1. MADRE  
@@ -1320,3 +1324,226 @@ uso_servicio %>%
 ```  
   
 ---  
+---  
+  
+# 3. Validaciones globales del modelo  
+  
+En este apartado se valida la consistencia global del modelo relacional, comprobando la integridad referencial entre entidades, las cardinalidades esperadas y la ausencia de inconsistencias en las claves primarias y foráneas.  
+
+## 3.1. Integridad referencial entre tablas
+
+### 3.1.1. Todas las madres de EMBARAZO existen en MADRE
+```{r}
+anti_join(
+  embarazo,
+  madre,
+  by = "id_madre"
+)
+```
+
+### 3.1.2. Todos los hijos pertenecen a un embarazo existente
+  
+```{r}
+anti_join(
+  hijo,
+  embarazo,
+  by = "id_embarazo"
+)
+```
+
+### 3.1.3. Todos los registros de SITUACION_ADMIN_MADRE pertenecen a una madre
+```{r}
+anti_join(
+  situacion_admin_madre,
+  madre,
+  by = "id_madre"
+)
+```
+
+### 3.1.4. Todos los registros de SITUACION_ADMIN_HIJO pertenecen a un hijo
+```{r}
+anti_join(
+  situacion_admin_hijo,
+  hijo,
+  by = "id_hijo"
+)
+```
+
+### 3.1.5. Todos los registros de USO_SERVICIO pertenecen a un embarazo  
+```{r}
+anti_join(
+  uso_servicio,
+  embarazo,
+  by = "id_embarazo"
+)
+```
+
+### 3.1.6. Todos los diagnósticos pertenecen a un paciente existente
+```{r}
+diagnostico %>%
+  filter(tipo_paciente == "Madre") %>%
+  anti_join(
+    madre,
+    by = c("id_paciente" = "id_madre")
+  )
+
+diagnostico %>%
+  filter(tipo_paciente == "Hijo") %>%
+  anti_join(
+    hijo,
+    by = c("id_paciente" = "id_hijo")
+  )
+```  
+ 
+---
+  
+## 3.2. Cardinalidades
+  
+### 3.2.1. Número de embarazos por madre
+```{r}
+embarazo %>%
+  count(id_madre,name="n_embarazos") %>%
+  count(n_embarazos) %>%
+  mutate(
+    porcentaje=100*n/sum(n)
+  )
+```
+
+### 3.2.2. Número de hijos por embarazo
+```{r}
+hijo %>%
+  count(id_embarazo) %>%
+  summarise(
+    minimo = min(n),
+    mediana = median(n),
+    media = mean(n),
+    maximo = max(n)
+  )
+```  
+  
+### 3.2.3. Número de diagnósticos por paciente
+```{r}
+diagnostico %>%
+  count(id_paciente) %>%
+  summarise(
+    minimo = min(n),
+    mediana = median(n),
+    media = mean(n),
+    maximo = max(n)
+  )
+```
+
+## 3.3. Validaciones temporales
+  
+### 3.3.1. Embarazos con FUR posterior al parto
+  
+```{r}
+embarazo %>%
+  mutate(
+    fur = as.Date(as.character(fur), "%Y%m%d"),
+    fecha_parto = as.Date(as.character(fecha_parto), "%Y%m%d")
+  ) %>%
+  filter(
+    !is.na(fur),
+    !is.na(fecha_parto),
+    fur > fecha_parto
+  )
+```
+
+### 3.3.2. Hijos nacidos antes del embarazo
+```{r}
+hijo %>%
+  left_join(
+    embarazo,
+    by="id_embarazo"
+  ) %>%
+  mutate(
+    fecha_nacimiento=as.Date(as.character(fecha_nacimiento),"%Y%m%d"),
+    fur=as.Date(as.character(fur),"%Y%m%d")
+  ) %>%
+  filter(
+    fecha_nacimiento<fur
+  )
+```  
+  
+## 3.4. Claves foráneas  
+```{r}
+## Comprobación de NAs
+
+list(
+
+  embarazo =
+    embarazo %>%
+    summarise(
+      NA_id_madre =
+        sum(is.na(id_madre))
+    ),
+
+  hijo =
+    hijo %>%
+    summarise(
+      NA_id_embarazo =
+        sum(is.na(id_embarazo))
+    ),
+
+  situacion_admin_madre =
+    situacion_admin_madre %>%
+    summarise(
+      NA_id_madre =
+        sum(is.na(id_madre))
+    ),
+
+  situacion_admin_hijo =
+    situacion_admin_hijo %>%
+    summarise(
+      NA_id_hijo =
+        sum(is.na(id_hijo))
+    ),
+
+  uso_servicio =
+    uso_servicio %>%
+    summarise(
+      NA_id_embarazo =
+        sum(is.na(id_embarazo))
+    )
+)
+```  
+  
+## 3.5. Resumen global del modelo
+```{r}
+
+tibble(
+
+  entidad = c(
+    "MADRE",
+    "EMBARAZO",
+    "HIJO",
+    "SITUACION_ADMIN_MADRE",
+    "SITUACION_ADMIN_HIJO",
+    "DIAGNOSTICO",
+    "USO_SERVICIO"
+  ),
+
+  registros = c(
+    nrow(madre),
+    nrow(embarazo),
+    nrow(hijo),
+    nrow(situacion_admin_madre),
+    nrow(situacion_admin_hijo),
+    nrow(diagnostico),
+    nrow(uso_servicio)
+
+  ),
+
+  variables = c(
+    ncol(madre),
+    ncol(embarazo),
+    ncol(hijo),
+    ncol(situacion_admin_madre),
+    ncol(situacion_admin_hijo),
+    ncol(diagnostico),
+    ncol(uso_servicio)
+  )
+)
+```
+
