@@ -14,8 +14,6 @@ pkg <- c(
   "skimr",
   ## Valores perdidos (NAs)
   "naniar",
-  ## Manejo de fechas
-  "lubridate"
   
   # 3. Análisis descriptivo
   
