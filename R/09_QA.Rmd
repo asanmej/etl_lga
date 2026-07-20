@@ -109,11 +109,12 @@ ggplot(
 ```{r}
 set.seed(123)
 
-madre %>%
+talla_muestra <- madre %>%
   filter(!is.na(talla)) %>%
-  slice_sample(n = min(5000, n())) %>%
-  pull(talla) %>%
-  shapiro.test()
+  slice_sample(n = 5000) %>%
+  pull(talla)
+
+shapiro.test(talla_muestra)
 ```  
   
 ### 2.1.9 Consistencia
@@ -308,8 +309,7 @@ ggplot(
   embarazo,
   aes(y = edad)
 ) +
-  geom_boxplot(width = .25)
-
+  geom_boxplot(width = .25) 
 
 ggplot(
   embarazo,
@@ -348,10 +348,7 @@ set.seed(123)
 embarazo %>%
   filter(!is.na(edad)) %>%
   slice_sample(
-    n = min(
-      5000,
-      n()
-    )
+    n = 5000
   ) %>%
   pull(edad) %>%
   shapiro.test()
@@ -367,10 +364,7 @@ ggplot(
 embarazo %>%
   filter(!is.na(imc_inicial)) %>%
   slice_sample(
-    n = min(
-      5000,
-      n()
-    )
+    n = 5000
   ) %>%
   pull(imc_inicial) %>%
   shapiro.test()
@@ -410,7 +404,9 @@ embarazo %>%
   filter(
     edad < 12 |
       edad > 50
-  )
+  ) %>% select(id_embarazo,
+               id_madre,
+               edad)
 ```  
   
 ### IMC inicial plausible
@@ -419,7 +415,9 @@ embarazo %>%
   filter(
     imc_inicial < 14 |
       imc_inicial > 45
-  )
+  ) %>% select(id_embarazo,
+                 id_madre,
+                 imc_inicial)
 ```  
   
 #### IMC final plausible
@@ -428,7 +426,9 @@ embarazo %>%
   filter(
     imc_final < 14 |
       imc_final > 45
-  )
+  ) %>% select(id_embarazo,
+                 id_madre,
+                 imc_final)
 ```  
   
 #### Abortos superiores al número de embarazos
@@ -437,7 +437,10 @@ embarazo %>%
   filter(
     abortos_anteriores >
       embarazos_anteriores
-  )
+  ) %>% select(id_embarazo,
+                 id_madre,
+                 abortos_anteriores,
+                 embarazos_anteriores)
 ```  
   
 #### Nacimientos superiores al número de embarazos
@@ -446,7 +449,10 @@ embarazo %>%
   filter(
     nacimientos_anteriores >
       embarazos_anteriores
-  )
+  ) %>% select(id_embarazo,
+                 id_madre,
+                nacimientos_anteriores,
+                 embarazos_anteriores)
 ```  
   
 ### 2.2.11 Fechas  
@@ -473,7 +479,10 @@ embarazo_fechas %>%
     !is.na(fur),
     !is.na(fecha_parto),
     fur > fecha_parto
-  )
+  ) %>% select(id_embarazo,
+                 id_madre,
+                 fur,
+               fecha_parto)
 ```  
   
 #### Duración del embarazo
@@ -670,7 +679,7 @@ set.seed(123)
 hijo %>%
   filter(!is.na(peso_nacimiento)) %>%
   slice_sample(
-    n = min(5000,n())
+    n = 5000
   ) %>%
   pull(peso_nacimiento) %>%
   shapiro.test()
@@ -688,18 +697,20 @@ ggplot(
 ```{r}
 hijo %>%
   filter(
-    peso_nacimiento < 300 |
+    peso_nacimiento < 450 |
       peso_nacimiento > 5300
-)
+) %>% select(id_hijo,
+             peso_nacimiento)
 ```  
   
 #### Talla plausible
 ```{r}
 hijo %>%
   filter(
-    talla_nacimiento < 20 |
+    talla_nacimiento < 25 |
     talla_nacimiento > 70
-)
+) %>% select(id_hijo,
+             talla_nacimiento)
 ```  
   
 #### Perímetro craneal plausible
@@ -708,7 +719,8 @@ hijo %>%
   filter(
     perimetro_craneal < 20 |
     perimetro_craneal > 50
-)
+) %>% select(id_hijo,
+             perimetro_craneal)
 ```  
   
 #### Edad gestacional plausible
@@ -717,19 +729,25 @@ hijo %>%
   filter(
     edad_gestacional_nacimiento < 20 |
     edad_gestacional_nacimiento > 45
-)
+) %>% select(id_hijo,
+             edad_gestacional_nacimiento)
 
 hijo %>%
   filter(
     edad_gestacional_nacimiento >= 37 &
     peso_nacimiento < 1000
-)
+) %>% select(id_hijo,
+             edad_gestacional_nacimiento,
+             peso_nacimiento)
 
 hijo %>%
   filter(
     edad_gestacional_nacimiento < 28 &
     peso_nacimiento > 3000
-)
+) %>% select(id_hijo,
+             edad_gestacional_nacimiento,
+             peso_nacimiento)
+
 ```  
   
 #### Malformaciones vacías  
@@ -1135,8 +1153,8 @@ ggplot(
 ```{r}
 diagnostico %>%
   filter(
-    is.na(fuente) |
-      fuente == ""
+    is.na(origen) |
+      origen == ""
   )
 ```  
   
