@@ -15,8 +15,6 @@ source("00_config.R")
 # 2. QA de cada entidad  
   
 ## 2.1. MADRE  
-  
-## 2.1 MADRE
 
 En esta sección se evalúa la calidad de la entidad MADRE mediante comprobaciones de estructura, completitud, unicidad de identificadores, distribución de variables y consistencia de los datos.  
   
