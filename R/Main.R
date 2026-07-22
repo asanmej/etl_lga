@@ -7,3 +7,5 @@ source("05_build_situacion_admin_madre.R")
 source("06_build_situacion_admin_hijo.R")
 source("07_build_diagnostico.R")
 source("08_build_uso_servicio.R")
+
+render("09_QA.Rmd", output_dir = "Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/Results")

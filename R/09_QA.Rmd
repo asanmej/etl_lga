@@ -1,0 +1,1647 @@
+---
+title: "Control de calidad de los datos transformados"
+author: "Inés García de la Peña Marco"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+---  
+# 1. Importación de librerias  
+```{r}
+source("00_config.R")
+```
+
+# 2. QA de cada entidad  
+  
+## 2.1. MADRE  
+
+En esta sección se evalúa la calidad de la entidad MADRE mediante comprobaciones de estructura, completitud, unicidad de identificadores, distribución de variables y consistencia de los datos.  
+  
+Cargamos los datos transformados:  
+```{r}
+madre <- read_csv("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/madre.csv")
+```  
+  
+### 2.1.1. Estructura de la tabla  
+**Objetivo:** Verificar que la tabla posee el tamaño esperado y que los tipos de datos son coherentes antes de comenzar el análisis.  
+
+```{r}
+madre %>%
+  summarise(
+    filas = n(),
+    columnas = ncol(.)
+  )
+
+glimpse(madre)
+```  
+  
+### 2.1.2 Valores perdidos (NAs)  
+**Objetivo:** Identificar variables con información ausente.  
+
+```{r}
+miss_var_summary(madre)
+```  
+  
+### 2.1.3. Resumen  
+**Objetivo:** Obtener un resumen rápido de todas las variables.  
+
+```{r}
+skim(madre)
+```  
+  
+### 2.1.4. Clave primaria  
+**Objetivo:** Verificar que id_madre identifica unívocamente cada registro.  
+
+```{r}
+madre %>%
+summarise(
+total=n(),
+ids_distintos=n_distinct(id_madre)
+)
+```  
+  
+### 2.1.5. Duplicados  
+**Objetivo:** Comprobar que no existen filas completamente duplicadas.  
+
+```{r}
+sum(duplicated(madre))
+```  
+
+### 2.1.6. Variables categóricas  
+**Objetivo:** Se revisa la distribución de las categorías para detectar categorías inesperadas o vacías.  
+```{r}
+madre %>%
+count(nacionalidad) %>%
+mutate(
+  porcentaje = round(100*n/sum(n),2)
+) %>%
+arrange(desc(n)) 
+```  
+  
+### 2.1.7. Variables numéricas  
+**Objetivo:** Se inspecciona la distribución de la variable para detectar asimetrías, acumulaciones o posibles errores de registro.  
+```{r}
+ggplot(
+  madre,
+  aes(talla)
+) +
+  geom_histogram(bins = 30) +
+  labs(
+    x = "Talla (cm)",
+    y = "Frecuencia"
+  )
+
+
+ggplot(
+  madre,
+  aes(y = talla)
+) +
+  geom_boxplot(width = .25) +
+  labs(
+    y = "Talla (cm)"
+  )
+```  
+  
+### 2.1.8 Normalidad
+**Objetivo:** Evaluar si la distribución de la talla puede aproximarse a una distribución normal.  
+
+```{r}
+set.seed(123)
+
+talla_muestra <- madre %>%
+  filter(!is.na(talla)) %>%
+  slice_sample(n = 5000) %>%
+  pull(talla)
+
+shapiro.test(talla_muestra)
+```  
+  
+### 2.1.9 Consistencia
+
+#### Talla dentro del rango biológicamente plausible
+```{r}
+madre %>%
+  filter(
+    talla < 100 |
+    talla > 210
+  )
+```  
+  
+#### Año de nacimiento plausible
+```{r}
+madre %>%
+  filter(
+    anio_nacimiento < 1930 |
+    anio_nacimiento > 2011
+  )
+```  
+  
+#### Nacionalidad informada
+```{r}
+madre %>%
+  filter(
+    is.na(nacionalidad) |
+      nacionalidad == ""
+  )
+```  
+  
+### 2.1.10 Outliers
+**Objetivo:** Identificar observaciones consideradas atípicas mediante el criterio IQR. (Estos valores no necesariamente representan errores de calidad)  
+
+```{r}
+boxplot.stats(madre$talla)$out |> length()
+```  
+  
+### 2.1.11 QQ-plot
+**Objetivo:** Evaluar visualmente el grado de aproximación de la distribución a la normalidad.
+```{r}
+ggplot(
+  madre,
+  aes(sample = talla)
+) +
+  stat_qq() +
+  stat_qq_line()
+```
+
+---  
+  
+## 2.2. EMBARAZO  
+  
+Se verifican las principales variables clínicas del embarazo, comprobando la coherencia temporal, la plausibilidad de los valores y la integridad de la información registrada.  
+  
+Cargamos los datos transformados:  
+```{r}
+embarazo <- read_csv("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/embarazo.csv")
+```  
+  
+### 2.2.1. Estructura de la tabla  
+**Objetivo:** Verificar que la tabla posee el tamaño esperado y que los tipos de datos son coherentes antes de comenzar el análisis.   
+```{r}
+embarazo %>%
+  summarise(
+    filas = n(),
+    columnas = ncol(.)
+  )
+
+glimpse(embarazo)
+```  
+  
+### 2.2.2. Valores perdidos (NA)  
+**Objetivo:** Identificar variables con información ausente.  
+```{r}
+miss_var_summary(embarazo)
+```   
+  
+### 2.2.3. Resumen  
+**Objetivo:** Obtener un resumen rápido de todas las variables. 
+```{r}
+skim(embarazo)
+```  
+  
+### 2.2.4. Clave primaria  
+**Objetivo:** Verificar que id_embarazo identifica unívocamente cada registro.  
+```{r}
+embarazo %>%
+  summarise(
+    total_registros = n(),
+    ids_distintos = n_distinct(id_embarazo)
+  )
+```  
+  
+### 2.2.5. Duplicados  
+**Objetivo:** Comprobar que no existen filas completamente duplicadas.  
+```{r}
+sum(duplicated(embarazo))
+```  
+  
+### 2.2.6. Variables categóricas  
+**Objetivo:** Se revisa la distribución de las categorías para detectar categorías inesperadas o vacías.  
+#### Tipo de parto  
+```{r}
+embarazo %>%
+  count(tipo_parto) %>%
+  mutate(
+    porcentaje = round(
+      100 * n / sum(n),
+      2
+    )
+  )
+```  
+  
+#### Consumo de tabaco
+```{r}
+embarazo %>%
+  count(consumo_tabaco) %>%
+  mutate(
+    porcentaje = round(
+      100 * n / sum(n),
+      2
+    )
+  )
+```  
+  
+#### Consumo de alcohol  
+```{r}
+embarazo %>%
+  count(consumo_alcohol) %>%
+  mutate(
+    porcentaje = round(
+      100 * n / sum(n),
+      2
+    )
+  )
+```  
+  
+### 2.2.7. Variables contínuas  
+**Objetivo:** Se inspecciona la distribución de la variable para detectar asimetrías, acumulaciones o posibles errores de registro.  
+#### Edad
+```{r}
+# Se inspecciona la distribución de la edad materna para detectar valores atípicos
+# o posibles errores de registro.
+ggplot(
+  embarazo,
+  aes(edad)
+) +
+  geom_histogram(
+    bins = 30
+  )
+```  
+  
+#### IMC inicial
+```{r}
+# Se revisa la distribución del IMC inicial para identificar valores extremos
+ggplot(
+  embarazo,
+  aes(imc_inicial)
+) +
+  geom_histogram(
+    bins = 30
+  ) 
+```  
+  
+#### Peso inicial
+```{r}
+# Se inspecciona la distribución del peso al inicio del embarazo
+ggplot(
+  embarazo,
+  aes(peso_inicial)
+) +
+  geom_histogram(
+    bins = 30
+  )
+```  
+  
+#### Peso final  
+```{r}
+# Se inspecciona la distribución del peso al final del embarazo
+ggplot(
+  embarazo,
+  aes(peso_final)
+) +
+  geom_histogram(
+    bins = 30
+  )
+```  
+  
+#### Ganancia de peso
+```{r}
+# Se revisa la distribución de la ganancia ponderal durante el embarazo
+ggplot(
+  embarazo,
+  aes(ganancia_peso)
+) +
+  geom_histogram(
+    bins = 30
+  )
+```  
+  
+### 2.2.7. Boxplots   
+**Objetivo:** Identificar posibles valores extremos que requieran una revisión adicional.  
+```{r}
+ggplot(
+  embarazo,
+  aes(y = edad)
+) +
+  geom_boxplot(width = .25) 
+
+ggplot(
+  embarazo,
+  aes(y = imc_inicial)
+) +
+  geom_boxplot(width = .25)
+
+
+ggplot(
+  embarazo,
+  aes(y = peso_inicial)
+) +
+  geom_boxplot(width = .25)
+
+
+ggplot(
+  embarazo,
+  aes(y = peso_final)
+) +
+  geom_boxplot(width = .25)
+
+
+ggplot(
+  embarazo,
+  aes(y = ganancia_peso)
+) +
+  geom_boxplot(width = .25)
+```  
+  
+### 2.2.8. Normalidad  
+Sólo para Edad e IMC inicial.  
+```{r}
+set.seed(123)
+
+# Edad
+embarazo %>%
+  filter(!is.na(edad)) %>%
+  slice_sample(
+    n = 5000
+  ) %>%
+  pull(edad) %>%
+  shapiro.test()
+
+# Para evaluar visualmente el grado de aproximación de la 
+# distribución la normalidad.
+ggplot(
+  embarazo,
+  aes(sample = edad)
+) +
+  stat_qq() +
+  stat_qq_line()
+
+# IMC inicial
+embarazo %>%
+  filter(!is.na(imc_inicial)) %>%
+  slice_sample(
+    n = 5000
+  ) %>%
+  pull(imc_inicial) %>%
+  shapiro.test()
+
+# Para evaluar visualmente el grado de aproximación de la 
+# distribución la normalidad.
+ggplot(
+  embarazo,
+  aes(sample = imc_inicial)
+) +
+  stat_qq() +
+  stat_qq_line()
+```  
+  
+### 2.2.10 Consistencia  
+  
+#### Peso final mayor o igual al peso inicial  
+Se verifica que el peso final no sea inferior al inicial salvo en los casos de pérdida ponderal durante el embarazo.  
+```{r}
+embarazo %>%
+  filter(
+    peso_final < peso_inicial
+  )
+```  
+  
+#### Ganancia de peso correctamente calculada  
+Se comprueba que la ganancia de peso almacenada coincida con la diferencia entre el peso final y el inicial.
+```{r}
+embarazo %>%
+  filter(
+    abs(
+      ganancia_peso -
+        (peso_final - peso_inicial)
+    ) > 0.01
+  )
+```  
+  
+#### Edad materna plausible  
+Se revisan edades maternas fuera del rango habitual para identificar posibles errores.
+```{r}
+embarazo %>%
+  filter(
+    edad < 12 |
+      edad > 50
+  ) %>% select(id_embarazo,
+               id_madre,
+               edad)
+```  
+  
+### IMC inicial plausible  
+Se identifican valores de IMC extremadamente bajos o altos que puedan indicar errores de registro.  
+```{r}
+embarazo %>%
+  filter(
+    imc_inicial < 14 |
+      imc_inicial > 45
+  ) %>% select(id_embarazo,
+                 id_madre,
+                 imc_inicial)
+```  
+  
+#### IMC final plausible  
+Se identifican valores de IMC extremadamente bajos o altos que puedan indicar errores de registro.  
+```{r}
+embarazo %>%
+  filter(
+    imc_final < 14 |
+      imc_final > 45
+  ) %>% select(id_embarazo,
+                 id_madre,
+                 imc_final)
+```  
+  
+#### Abortos superiores al número de embarazos  
+Se comprueba la coherencia entre el número de embarazos y abortos previos.  
+```{r}
+embarazo %>%
+  filter(
+    abortos_anteriores >
+      embarazos_anteriores
+  ) %>% select(id_embarazo,
+                 id_madre,
+                 abortos_anteriores,
+                 embarazos_anteriores)
+```  
+  
+#### Nacimientos superiores al número de embarazos  
+Se comprueba la coherencia entre el número de embarazos y nacimientos previos.
+```{r}
+embarazo %>%
+  filter(
+    nacimientos_anteriores >
+      embarazos_anteriores
+  ) %>% select(id_embarazo,
+                 id_madre,
+                nacimientos_anteriores,
+                 embarazos_anteriores)
+```  
+  
+### 2.2.11 Fechas  
+
+```{r}
+embarazo_fechas <-
+  embarazo %>%
+  mutate(
+    fur = as.Date(
+      as.character(fur),
+      "%Y%m%d"
+    ),
+    fecha_parto = as.Date(
+      as.character(fecha_parto),
+      "%Y%m%d"
+    )
+  )
+```  
+  
+#### FUR posterior al parto  
+Se verifica que la Fecha de Última Regla sea anterior a la fecha del parto.  
+```{r}
+embarazo_fechas %>%
+  filter(
+    !is.na(fur),
+    !is.na(fecha_parto),
+    fur > fecha_parto
+  ) %>% select(id_embarazo,
+                 id_madre,
+                 fur,
+               fecha_parto)
+```  
+  
+#### Duración del embarazo  
+Se calcula la duración de la gestación para detectar posibles inconsistencias temporales.  
+```{r}
+embarazo_fechas %>%
+  mutate(
+    dias_embarazo =
+      as.numeric(
+        fecha_parto - fur
+      )
+  ) %>%
+  summarise(
+    minimo = min(
+      dias_embarazo,
+      na.rm = TRUE
+    ),
+    media = mean(
+      dias_embarazo,
+      na.rm = TRUE
+    ),
+    mediana = median(
+      dias_embarazo,
+      na.rm = TRUE
+    ),
+    maximo = max(
+      dias_embarazo,
+      na.rm = TRUE
+    )
+  )
+
+
+ggplot(
+  embarazo_fechas %>%
+    mutate(
+      dias_embarazo =
+        as.numeric(
+          fecha_parto - fur
+        )
+    ),
+  aes(dias_embarazo)
+) +
+  geom_histogram(
+    bins = 30
+  )
+```  
+  
+#### Gestaciones con duración implausible
+```{r}
+# Se verifica que los valores se encuentren dentro de un rango biológicamente plausible.
+embarazo_fechas %>%
+  mutate(
+    dias_embarazo =
+      as.numeric(
+        fecha_parto - fur
+      )
+  ) %>%
+  filter(
+    dias_embarazo < 180 |
+      dias_embarazo > 320
+  )
+```  
+  
+### 2.2.12 Outliers
+```{r}
+boxplot.stats(embarazo$edad)$out |> length()
+
+boxplot.stats(embarazo$imc_inicial)$out |>length()
+
+boxplot.stats(embarazo$peso_inicial)$out |> length()
+
+boxplot.stats(embarazo$peso_final)$out |> length()
+
+boxplot.stats(embarazo$ganancia_peso)$out |> length()
+```  
+  
+---  
+  
+## 2.3. HIJO  
+  
+Se revisa la calidad de los datos neonatales, prestando especial atención a las variables antropométricas y a la consistencia de las fechas y medidas registradas.  
+  
+Cargamos los datos transformados:  
+```{r}
+hijo <- read_csv("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/hijo.csv")
+```  
+  
+### 2.3.1. Estructura de la tabla   
+**Objetivo:** Verificar que la tabla posee el tamaño esperado y que los tipos de datos son coherentes antes de comenzar el análisis.   
+```{r}
+hijo %>%
+  summarise(
+    filas = n(),
+    columnas = ncol(.)
+  )
+
+glimpse(hijo)
+```  
+  
+### 2.3.2. Valores perdidos (NAs)  
+**Objetivo:** Identificar variables con información ausente. 
+```{r}
+miss_var_summary(hijo) 
+```  
+  
+### 2.3.3. Resumen  
+**Objetivo:** Obtener un resumen rápido de todas las variables. 
+```{r}
+skim(hijo) 
+```  
+  
+### 2.3.4. Clave primaria  
+**Objetivo:** Verificar que id_hijo identifica unívocamente cada registro.  
+```{r}
+hijo %>%
+  summarise(
+    total=n(),
+    ids_distintos=n_distinct(id_hijo)
+    )
+```  
+  
+### 2.3.5. Duplicados  
+**Objetivo:** Comprobar que no existen filas completamente duplicadas.  
+```{r}
+sum(duplicated(hijo))
+```  
+
+### 2.3.6. Variables categóricas  
+**Objetivo:** Se revisa la distribución de las categorías para detectar categorías inesperadas o vacías.  
+#### Malformaciones
+```{r}
+hijo %>%
+  count(malformation_cd) %>%
+  mutate(
+    porcentaje = round(100*n/sum(n),2)
+    )
+```  
+  
+#### Muerte neonatal  
+```{r}
+hijo %>%
+  count(muerte_neonatal) %>%
+  mutate(
+    porcentaje = round(100*n/sum(n),2)
+    )
+```  
+  
+### 2.3.7. Variables continuas  
+**Objetivo:** Se inspecciona la distribución de la variable para detectar asimetrías, acumulaciones o posibles errores de registro.  
+
+#### Peso nacimiento  
+```{r}
+# Se inspecciona la distribución del peso al nacimiento
+ggplot(hijo,
+       aes(peso_nacimiento))+
+  geom_histogram(bins=30)
+```  
+  
+#### Talla  
+```{r}
+# Se inspecciona la distribución de la talla al nacimiento
+ggplot(hijo,
+       aes(talla_nacimiento))+
+  geom_histogram(bins=30)
+```  
+  
+#### Perímetro craneal
+```{r}
+# Se revisa la distribución del perímetro craneal al nacimiento
+ggplot(hijo,
+       aes(perimetro_craneal))+
+  geom_histogram(bins=30)
+```  
+  
+#### Edad gestacional  
+```{r}
+# Se comprueba la distribución de la edad gestacional registrada
+ggplot(hijo, 
+       aes(edad_gestacional_nacimiento)) +
+  geom_histogram(bins = 30)
+```
+
+  
+### 2.3.8. Boxplots  
+**Objetivo:** Identificar posibles valores extremos que requieran una revisión adicional.  
+```{r}
+ggplot(hijo,
+       aes(y=peso_nacimiento))+
+  geom_boxplot(width=.25)
+
+ggplot(hijo,
+       aes(y=talla_nacimiento))+
+  geom_boxplot(width=.25)
+
+ggplot(hijo,
+       aes(y=perimetro_craneal))+
+  geom_boxplot(width=.25)  
+  
+ggplot(hijo,
+       aes(y = edad_gestacional_nacimiento)) +
+  geom_boxplot(width = .25)
+```  
+  
+### 2.3.9. Normalidad  
+```{r}
+## Peso al nacimiento
+set.seed(123)
+
+hijo %>%
+  filter(!is.na(peso_nacimiento)) %>%
+  slice_sample(
+    n = 5000
+  ) %>%
+  pull(peso_nacimiento) %>%
+  shapiro.test()
+
+# Para evaluar visualmente el grado de aproximación de la 
+# distribución la normalidad.
+ggplot(
+  hijo,
+  aes(sample = peso_nacimiento)) +
+  stat_qq() +
+  stat_qq_line()
+```  
+  
+### 2.3.10. Consistencia  
+  
+#### Peso al nacimiento plausible  
+Se comprueba que el peso al nacimiento esté dentro de límites compatibles con la práctica clínica.  
+```{r}
+hijo %>%
+  filter(
+    peso_nacimiento < 450 |
+      peso_nacimiento > 5300
+) %>% select(id_hijo,
+             peso_nacimiento)
+```  
+  
+#### Talla plausible  
+Se revisan tallas incompatibles con un recién nacido.  
+```{r}
+hijo %>%
+  filter(
+    talla_nacimiento < 25 |
+    talla_nacimiento > 70
+) %>% select(id_hijo,
+             talla_nacimiento)
+```  
+  
+#### Perímetro craneal plausible  
+Se identifican perímetros craneales improbables para detectar posibles errores de registro 
+```{r}
+hijo %>%
+  filter(
+    perimetro_craneal < 20 |
+    perimetro_craneal > 50
+) %>% select(id_hijo,
+             perimetro_craneal)
+```  
+  
+#### Edad gestacional plausible  
+Se verifica que la edad gestacional registrada sea clínicamente plausible.
+```{r}
+hijo %>%
+  filter(
+    edad_gestacional_nacimiento < 20 |
+    edad_gestacional_nacimiento > 45
+) %>% select(id_hijo,
+             edad_gestacional_nacimiento)
+
+hijo %>%
+  filter(
+    edad_gestacional_nacimiento >= 37 &
+    peso_nacimiento < 1000
+) %>% select(id_hijo,
+             edad_gestacional_nacimiento,
+             peso_nacimiento)
+
+hijo %>%
+  filter(
+    edad_gestacional_nacimiento < 28 &
+    peso_nacimiento > 3000
+) %>% select(id_hijo,
+             edad_gestacional_nacimiento,
+             peso_nacimiento)
+
+```  
+  
+#### Malformaciones vacías  
+```{r}
+hijo %>%
+  filter(
+    malformation_cd == ""
+  )
+```  
+  
+### 2.3.11. Fechas  
+Se obtienen la fecha mínima y máxima registradas y se representa un histograma para explorar la distribución temporal de los nacimientos, detectar posibles concentraciones en determinados periodos y comprobar la existencia de valores atípicos o fechas inconsistentes.
+```{r}
+hijo %>%
+  mutate(
+    fecha_nacimiento =
+      as.Date(
+        as.character(fecha_nacimiento),
+        "%Y%m%d"
+      )
+  ) %>%
+  summarise(
+    fecha_minima = min(
+      fecha_nacimiento,
+      na.rm = TRUE
+    ),
+    fecha_maxima = max(
+      fecha_nacimiento,
+      na.rm = TRUE
+    )
+  )
+
+
+ggplot(
+  hijo %>%
+    mutate(
+      fecha_nacimiento =
+        as.Date(
+          as.character(fecha_nacimiento),
+          "%Y%m%d"
+        )
+    ),
+  aes(fecha_nacimiento)
+) +
+  geom_histogram(
+    bins = 50
+  )
+```  
+  
+### 2.3.12. Outliers  
+```{r}
+boxplot.stats(hijo$peso_nacimiento)$out |> length()
+
+boxplot.stats(hijo$talla_nacimiento)$out |>length()
+
+boxplot.stats(hijo$perimetro_craneal)$out |> length()
+
+boxplot.stats(hijo$edad_gestacional_nacimiento)$out |> length()
+```  
+  
+---  
+  
+## 2.4. SITUACION_ADMIN_MADRE  
+  
+Cargamos los datos transformados:  
+```{r}
+situacion_admin_madre <- read_csv("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/situacion_admin_madre.csv")
+```  
+  
+### 2.4.1. Estructura de la tabla  
+**Objetivo:** Verificar que la tabla posee el tamaño esperado y que los tipos de datos son coherentes antes de comenzar el análisis.   
+```{r}
+situacion_admin_madre %>%
+  summarise(
+    filas = n(),
+    columnas = ncol(.)
+  )
+
+glimpse(situacion_admin_madre)
+```  
+  
+### 2.4.2. Datos perdidos (NAs)  
+**Objetivo:** Identificar variables con información ausente.   
+```{r}
+miss_var_summary(situacion_admin_madre) 
+```    
+
+### 2.4.3. Resumen  
+**Objetivo:** Obtener un resumen rápido de todas las variables. 
+```{r}
+skim(situacion_admin_madre) 
+```  
+  
+### 2.4.4. Clave primaria  
+**Objetivo:** Verificar que id_admin_madre identifica unívocamente cada registro.  
+```{r}
+situacion_admin_madre %>%
+  summarise(
+    total=n(),
+    ids_distintos=n_distinct(id_admin_madre)
+  )
+```   
+  
+### 2.4.5. Duplicados  
+**Objetivo:** Comprobar que no existen filas completamente duplicadas.  
+```{r}
+sum(duplicated(situacion_admin_madre))
+```  
+  
+### 2.4.6. Variables categóricas  
+**Objetivo:** Se revisa la distribución de las categorías para detectar categorías inesperadas o vacías.  
+#### TSI
+```{r}
+situacion_admin_madre %>%
+  count(tsi, sort=TRUE) %>%
+  mutate(
+    porcentaje = round(100*n/sum(n),2)
+  )
+```  
+
+####  ZBS  
+```{r}
+situacion_admin_madre %>%
+  count(zbs, sort=TRUE)	%>%
+  mutate(
+    porcentaje = round(100*n/sum(n),2)
+  )
+```  
+  
+### 2.4.7. Consistencia  
+  
+#### Año administrativo
+```{r}
+situacion_admin_madre %>%
+  filter(
+    anio < 2018 |
+    anio > 2023
+  )
+```  
+  
+#### TSI vacío  
+```{r}
+situacion_admin_madre %>%
+  filter(
+    is.na(tsi) |
+      tsi == ""
+  )
+```  
+  
+#### ZBS vacío  
+```{r}
+situacion_admin_madre %>%
+  filter(
+    is.na(zbs) |
+      zbs == ""
+  )
+```  
+  
+#### Índice de privación vacío  
+```{r}
+situacion_admin_madre %>%
+  filter(
+    is.na(indice_privacion) |
+      indice_privacion == ""
+  )
+```  
+  
+### 2.4.8. Un registro por madre y año  
+**Objetivo:** Verificar que una madre no presenta más de un registro administrativo para un mismo año.
+```{r}
+situacion_admin_madre %>%
+  count(
+    id_madre,
+    anio
+  ) %>%
+  filter(n > 1)
+```  
+  
+### 2.4.9 Fechas
+**Objetivo:** Comprobar el intervalo temporal cubierto por la entidad.  
+```{r}
+situacion_admin_madre %>%
+  summarise(
+    primer_anio = min(
+      anio,
+      na.rm = TRUE
+    ),
+    ultimo_anio = max(
+      anio,
+      na.rm = TRUE
+    )
+  )
+```  
+  
+---  
+  
+## 2.5. SITUACION_ADMIN_HIJO  
+  
+Cargamos los datos transformados:  
+```{r}
+situacion_admin_hijo <- read_csv("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/situacion_admin_hijo.csv")
+```  
+  
+### 2.5.1. Estructura de la tabla    
+**Objetivo:** Verificar que la tabla posee el tamaño esperado y que los tipos de datos son coherentes antes de comenzar el análisis.   
+```{r}
+situacion_admin_hijo %>%
+  summarise(
+    filas = n(),
+    columnas = ncol(.)
+  )
+
+glimpse(situacion_admin_hijo)
+```  
+  
+### 2.5.2. Valores perdidos (NA)  
+**Objetivo:** Identificar variables con información ausente. 
+```{r}
+miss_var_summary(situacion_admin_hijo)
+```  
+  
+### 2.5.3. Resumen   
+**Objetivo:** Obtener un resumen rápido de todas las variables. 
+```{r}
+skim(situacion_admin_hijo)
+```  
+  
+### 2.5.4. Clave primaria  
+**Objetivo:** Verificar que id_admin_hijo identifica unívocamente cada registro.  
+```{r}
+situacion_admin_hijo %>%
+  summarise(
+    total = n(),
+    ids_distintos = n_distinct(id_admin_hijo)
+)
+```  
+  
+### 2.5.5. Duplicados  
+**Objetivo:** Comprobar que no existen filas completamente duplicadas.  
+```{r}
+sum(duplicated(situacion_admin_hijo))
+```  
+  
+### 2.5.6. Variables categóricas  
+**Objetivo:** Se revisa la distribución de las categorías para detectar categorías inesperadas o vacías.  
+#### TSI
+```{r}
+situacion_admin_hijo %>%
+  count(tsi, sort=TRUE) %>%
+  mutate(
+    porcentaje = round(100*n/sum(n),2)
+)
+```  
+  
+#### ZBS  
+```{r}
+situacion_admin_hijo %>%
+  count(zbs,sort=TRUE) %>%
+  mutate(
+    porcentaje = round(100*n/sum(n),2)
+)
+```  
+  
+### 2.5.7. Consistencia  
+  
+#### TSI vacío  
+```{r}
+situacion_admin_hijo %>%
+  filter(
+    is.na(tsi) |
+      tsi == ""
+  )
+```  
+  
+#### ZBS vacío  
+```{r}
+situacion_admin_hijo %>%
+  filter(
+    is.na(zbs) |
+      zbs == ""
+  )
+```  
+  
+#### Índice de privación vacío  
+```{r}
+situacion_admin_hijo %>%
+  filter(
+    is.na(indice_privacion) |
+      indice_privacion == ""
+  )
+```  
+  
+### 2.5.9. Un registro administrativo por hijo
+```{r}
+situacion_admin_hijo %>%
+count(id_hijo) %>%
+filter(n > 1)
+```
+  
+---  
+  
+## 2.6. DIAGNOSTICO  
+   
+Se comprueba la consistencia de los registros diagnósticos, la integridad de los identificadores y la existencia de posibles duplicados.  
+  
+Cargamos los datos transformados:  
+```{r}
+diagnostico <- read_csv("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/diagnostico.csv")
+```  
+  
+### 2.6.1. Estructura de la tabla   
+**Objetivo:** Verificar que la tabla posee el tamaño esperado y que los tipos de datos son coherentes antes de comenzar el análisis.   
+```{r}
+diagnostico %>%
+  summarise(
+    filas = n(),
+    columnas = ncol(.)
+  )
+
+glimpse(diagnostico)
+```  
+  
+### 2.6.2. Valores perdidos (NAs)  
+**Objetivo:** Identificar variables con información ausente.  
+```{r}
+miss_var_summary(diagnostico)
+```   
+  
+### 2.6.3. Resumen  
+**Objetivo:** Obtener un resumen rápido de todas las variables. 
+```{r}
+skim(diagnostico)
+```  
+  
+### 2.6.4. Clave primaria  
+**Objetivo:** Verificar que id_diagnostico identifica unívocamente cada registro.  
+```{r}
+diagnostico %>%
+  summarise(
+    total=n(),
+    ids_distintos = n_distinct(id_diagnostico)
+  )
+```
+
+### 2.6.5. Duplicados  
+**Objetivo:** Comprobar que no existen filas completamente duplicadas.  
+```{r}
+sum(duplicated(diagnostico))
+```   
+  
+### 2.6.6. Distribución de variables categóricas   
+**Objetivo:** Se revisa la distribución de las categorías para detectar categorías inesperadas o vacías.  
+#### Por tipo de paciente
+```{r}
+diagnostico %>%
+  count(tipo_paciente) %>%
+  mutate(
+    porcentaje = round(100 * n / sum(n), 2)
+  )
+```  
+  
+#### Por origen de los datos (fuente)  
+```{r}
+diagnostico %>%
+  count(origen) %>%
+  mutate(
+    porcentaje = round(100 * n / sum(n), 2)
+  )
+```  
+  
+#### Cruce entre tipo de paciente y origen  
+Para comprobar que únicamente existen las combinaciones esperadas (Madre -> OMI, Madre -> CMBD e Hijo -> OMI)
+```{r}
+diagnostico %>%
+  count(tipo_paciente, origen)
+
+ggplot(diagnostico,
+       aes(origen,
+           fill = tipo_paciente))+
+geom_bar(position="dodge")
+```  
+  
+### 2.6.7. Fechas  
+Se comprueba que las fechas de diagnóstico se encuentren dentro del periodo de estudio y se inspecciona su distribución temporal para detectar posibles concentraciones o discontinuidades.
+```{r}
+diagnostico %>%
+  mutate(
+    diag_dt = as.Date(
+      as.character(diag_dt),
+      "%Y%m%d"
+    )
+  ) %>%
+  summarise(
+    fecha_minima = min(
+      diag_dt,
+      na.rm = TRUE
+    ),
+    fecha_maxima = max(
+      diag_dt,
+      na.rm = TRUE
+    )
+  )
+
+ggplot(
+  diagnostico %>%
+    mutate(
+      diag_dt = as.Date(
+        as.character(diag_dt),
+        "%Y%m%d"
+      )
+    ),
+  aes(diag_dt)
+) +
+  geom_histogram(
+    bins = 50
+  )
+```  
+  
+### 2.6.8. Consistencia  
+  
+#### Origen de los datos vacío
+```{r}
+diagnostico %>%
+  filter(
+    is.na(origen) |
+      origen == ""
+  )
+```  
+  
+#### Código diagnóstico vacío
+```{r}
+diagnostico %>%
+  filter(
+    is.na(diag_cd) |
+      diag_cd == ""
+  )
+```  
+  
+#### Diagnósticos duplicados
+**Objetivo:** Detectar diagnósticos repetidos para un mismo paciente el mismo día.  
+Se excluyen los diagnósticos sin fecha ya que podrían corresponder a episodios diferentes.
+```{r}
+diagnostico %>%
+  filter(
+    !is.na(diag_dt)
+  ) %>%
+  count(
+    id_paciente,
+    diag_dt,
+    diag_cd
+  ) %>%
+  filter(
+    n > 1
+  )
+```  
+  
+### 2.6.9. Outliers temporales
+**Objetivo:** Detectar registros fuera del periodo de estudio.
+```{r}
+diagnostico %>%
+  mutate(
+    diag_dt = as.Date(
+      as.character(diag_dt),
+      "%Y%m%d"
+    )
+  ) %>%
+  filter(
+    !is.na(diag_dt),
+    (
+      lubridate::year(diag_dt) < 2017 |
+      lubridate::year(diag_dt) > 2024
+    )
+  )
+```
+
+---   
+  
+## 2.7. USO_SERVICIO  
+  
+Se valida la coherencia de las variables de utilización de servicios sanitarios y la correcta agregación de las visitas por embarazo.  
+  
+Cargamos los datos transformados:  
+```{r}
+uso_servicio <- read_csv("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/uso_servicio.csv")
+```  
+  
+### 2.7.1. Estructura de la tabla  
+**Objetivo:** Verificar que la tabla posee el tamaño esperado y que los tipos de datos son coherentes antes de comenzar el análisis.   
+```{r}
+uso_servicio %>%
+  summarise(
+    filas = n(),
+    columnas = ncol(.)
+  )
+
+glimpse(uso_servicio)
+```  
+  
+### 2.7.2. Valores perdidos (NAs)  
+**Objetivo:** Identificar variables con información ausente. 
+```{r}
+miss_var_summary(uso_servicio) 
+```  
+  
+### 2.7.3. Resumen  
+**Objetivo:** Obtener un resumen rápido de todas las variables. 
+```{r}
+skim(uso_servicio)
+```  
+  
+### 2.7.4. Clave primaria  
+**Objetivo:** Verificar que id_uso_servicio identifica unívocamente cada registro.  
+```{r}
+uso_servicio %>%
+  summarise(
+    registros = n(),
+    id_uso = n_distinct(id_uso_servicio)
+  )
+```  
+
+### 2.7.5. Duplicados  
+**Objetivo:** Comprobar que no existen filas completamente duplicadas.  
+```{r}
+sum(duplicated(uso_servicio))
+```  
+  
+### 2.7.6. Variables continuas  
+**Objetivo:** Se inspecciona la distribución de la variable para detectar acumulaciones o posibles errores de registro.  
+#### Visitas de seguimiento del embarazo
+```{r}
+ggplot(
+  uso_servicio,
+  aes(n_visitas_embarazo)
+) +
+geom_histogram(bins = 30)  
+```  
+  
+#### Visitas en Atención Primaria
+```{r}
+ggplot(
+  uso_servicio,
+  aes(n_visitas_atencion_primaria)
+) +
+geom_histogram(bins = 30)
+```  
+  
+#### Visitas hospitalarias
+```{r}
+ggplot(
+  uso_servicio,
+  aes(n_visitas_hospitalarias)
+) +
+geom_histogram(bins = 30)
+```  
+
+#### Distribución conjunta  
+```{r}
+uso_servicio %>%
+  mutate(
+    cartilla = n_visitas_embarazo > 0,
+    primaria = n_visitas_atencion_primaria > 0,
+    hospital = n_visitas_hospitalarias > 0
+  ) %>%
+  count(cartilla, primaria, hospital)
+```  
+  
+### 2.7.7. Boxplots  
+**Objetivo:** Identificar posibles valores extremos que requieran una revisión adicional  
+```{r}
+ggplot(
+  uso_servicio,
+  aes(y = n_visitas_embarazo)
+) +
+  geom_boxplot(width = .25)
+
+ggplot(
+  uso_servicio,
+  aes(y = n_visitas_atencion_primaria)
+) +
+  geom_boxplot(width = .25)
+
+ggplot(
+  uso_servicio,
+  aes(y = n_visitas_hospitalarias)
+) +
+  geom_boxplot(width = .25)
+```
+
+
+### 2.7.8. Consitencias  
+#### Embarazos sin ninguna visita registrada  
+```{r}
+uso_servicio %>%
+filter(
+  n_visitas_embarazo == 0 &
+  n_visitas_atencion_primaria == 0 &
+  n_visitas_hospitalarias == 0
+)
+```  
+  
+#### Número muy elevado de visitas  
+```{r}
+uso_servicio %>%
+filter(
+  n_visitas_embarazo > 25 |
+  n_visitas_atencion_primaria > 50 |
+  n_visitas_hospitalarias > 20
+)
+```  
+  
+#### Visitas negativas  
+Se verifica que no existan recuentos negativos de utilización sanitaria.
+```{r}
+uso_servicio %>%
+  filter(
+    n_visitas_embarazo < 0 |
+      n_visitas_atencion_primaria < 0 |
+      n_visitas_hospitalarias < 0
+  )
+```  
+  
+---  
+---  
+  
+# 3. Validaciones globales del modelo  
+  
+En este apartado se valida la consistencia global del modelo relacional, comprobando la integridad referencial entre entidades, las cardinalidades esperadas y la ausencia de inconsistencias en las claves primarias y foráneas.  
+
+## 3.1. Integridad referencial entre tablas  
+  
+Se verifica la integridad referencial entre las distintas entidades del modelo.  
+  
+### 3.1.1. Todas las madres de EMBARAZO existen en MADRE
+```{r}
+anti_join(
+  embarazo,
+  madre,
+  by = "id_madre"
+)
+```
+
+### 3.1.2. Todos los hijos pertenecen a un embarazo existente
+  
+```{r}
+anti_join(
+  hijo,
+  embarazo,
+  by = "id_embarazo"
+)
+```
+
+### 3.1.3. Todos los registros de SITUACION_ADMIN_MADRE pertenecen a una madre
+```{r}
+anti_join(
+  situacion_admin_madre,
+  madre,
+  by = "id_madre"
+)
+```
+
+### 3.1.4. Todos los registros de SITUACION_ADMIN_HIJO pertenecen a un hijo
+```{r}
+anti_join(
+  situacion_admin_hijo,
+  hijo,
+  by = "id_hijo"
+)
+```
+
+### 3.1.5. Todos los registros de USO_SERVICIO pertenecen a un embarazo  
+```{r}
+anti_join(
+  uso_servicio,
+  embarazo,
+  by = "id_embarazo"
+)
+```
+
+### 3.1.6. Todos los diagnósticos pertenecen a un paciente existente
+```{r}
+diagnostico %>%
+  filter(tipo_paciente == "Madre") %>%
+  anti_join(
+    madre,
+    by = c("id_paciente" = "id_madre")
+  )
+
+diagnostico %>%
+  filter(tipo_paciente == "Hijo") %>%
+  anti_join(
+    hijo,
+    by = c("id_paciente" = "id_hijo")
+  )
+```  
+ 
+---
+  
+## 3.2. Cardinalidades  
+  
+Se comprueba que las relaciones entre entidades respeten las cardinalidades esperadas.  
+  
+### 3.2.1. Número de embarazos por madre
+```{r}
+embarazo %>%
+  count(id_madre,name="n_embarazos") %>%
+  count(n_embarazos) %>%
+  mutate(
+    porcentaje=100*n/sum(n)
+  )
+```
+
+### 3.2.2. Número de hijos por embarazo
+```{r}
+hijo %>%
+  count(id_embarazo) %>%
+  summarise(
+    minimo = min(n),
+    mediana = median(n),
+    media = mean(n),
+    maximo = max(n)
+  )
+```  
+  
+### 3.2.3. Número de diagnósticos por paciente
+```{r}
+diagnostico %>%
+  count(id_paciente) %>%
+  summarise(
+    minimo = min(n),
+    mediana = median(n),
+    media = mean(n),
+    maximo = max(n)
+  )
+```
+
+## 3.3. Validaciones temporales
+  
+### 3.3.1. Embarazos con FUR posterior al parto
+  
+```{r}
+embarazo %>%
+  mutate(
+    fur = as.Date(as.character(fur), "%Y%m%d"),
+    fecha_parto = as.Date(as.character(fecha_parto), "%Y%m%d")
+  ) %>%
+  filter(
+    !is.na(fur),
+    !is.na(fecha_parto),
+    fur > fecha_parto
+  )
+```
+
+### 3.3.2. Hijos nacidos antes del embarazo
+```{r}
+hijo %>%
+  left_join(
+    embarazo,
+    by="id_embarazo"
+  ) %>%
+  mutate(
+    fecha_nacimiento=as.Date(as.character(fecha_nacimiento),"%Y%m%d"),
+    fur=as.Date(as.character(fur),"%Y%m%d")
+  ) %>%
+  filter(
+    fecha_nacimiento<fur
+  )
+```  
+  
+## 3.4. Claves foráneas  
+Se verifica que las claves foráneas obligatorias no contengan valores ausentes.  
+```{r}
+## Comprobación de NAs
+
+list(
+
+  embarazo =
+    embarazo %>%
+    summarise(
+      NA_id_madre =
+        sum(is.na(id_madre))
+    ),
+
+  hijo =
+    hijo %>%
+    summarise(
+      NA_id_embarazo =
+        sum(is.na(id_embarazo))
+    ),
+
+  situacion_admin_madre =
+    situacion_admin_madre %>%
+    summarise(
+      NA_id_madre =
+        sum(is.na(id_madre))
+    ),
+
+  situacion_admin_hijo =
+    situacion_admin_hijo %>%
+    summarise(
+      NA_id_hijo =
+        sum(is.na(id_hijo))
+    ),
+
+  uso_servicio =
+    uso_servicio %>%
+    summarise(
+      NA_id_embarazo =
+        sum(is.na(id_embarazo))
+    )
+)
+```  
+  
+## 3.5. Resumen global del modelo
+```{r}
+
+tibble(
+
+  entidad = c(
+    "MADRE",
+    "EMBARAZO",
+    "HIJO",
+    "SITUACION_ADMIN_MADRE",
+    "SITUACION_ADMIN_HIJO",
+    "DIAGNOSTICO",
+    "USO_SERVICIO"
+  ),
+
+  registros = c(
+    nrow(madre),
+    nrow(embarazo),
+    nrow(hijo),
+    nrow(situacion_admin_madre),
+    nrow(situacion_admin_hijo),
+    nrow(diagnostico),
+    nrow(uso_servicio)
+
+  ),
+
+  variables = c(
+    ncol(madre),
+    ncol(embarazo),
+    ncol(hijo),
+    ncol(situacion_admin_madre),
+    ncol(situacion_admin_hijo),
+    ncol(diagnostico),
+    ncol(uso_servicio)
+  )
+)
+```
+
