@@ -14,8 +14,8 @@ pkg <- c(
   "skimr",
   ## Valores perdidos (NAs)
   "naniar",
-  ## Manejo de fechas
-  "lubridate"
+  ## Para guardar el HTML en otro directorio
+  "rmarkdown"
   
   # 3. Análisis descriptivo
   
