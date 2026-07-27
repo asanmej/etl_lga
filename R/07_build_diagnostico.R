@@ -27,6 +27,9 @@ madres_validas <- hijo_neosoft %>%
 
 # Limpieza de los datos y filtramos haciendo uso de madres_validas para los diagnosticos
 # y la entidad HIJO para los diagnosticos de los hijos (ejecutada anterior mente en Main.R)
+madre_diag_cmbd <- madre_diag_cmbd %>%
+  rename(diag_dt = fecing)
+
 madre_diag_omi <- madre_diag_omi %>%
   clean_names() %>%
   distinct() %>%
