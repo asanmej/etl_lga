@@ -17,7 +17,11 @@ hijo_demograficos <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-S
 # Limpieza de las fuentes
 hijo_neosoft <- hijo_neosoft %>%
   clean_names() %>%
-  distinct()
+  distinct() %>%
+  # Eliminamos los recién nacidos que no tienen registo de fecha de nacimiento y
+  # están en hijo_neosoft.csv pero no en hijo_demograficos.csv
+  semi_join(hijo_demograficos, by = "patient_id")
+
 
 hijo_demograficos <- hijo_demograficos %>%
   clean_names() %>%
@@ -149,6 +153,10 @@ embarazos_aux <- embarazos_aux %>%
     with_ties = FALSE
   ) %>%
   ungroup()
+
+
+embarazos_aux <- embarazos_aux %>%
+  filter(!is.na(fecha_parto))
 
 # Crear la fecha de inicio del embarazo.
 # Cuando no existe FUR (fecha_referencia), se aproxima restando nueve meses
