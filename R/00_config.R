@@ -24,7 +24,7 @@ pkg <- c(
   "gt",
   ## Conversión de resultados estadísticos en tablas ordenadas (tidy)
   "broom",
-  ##
+  ## Formato de porcentajes, ejes y escalas
   "scales",
   
   # 4. Análisis de sensibilidad
