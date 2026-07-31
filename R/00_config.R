@@ -1,5 +1,7 @@
 
-# 00_config.R: Carga de librerías
+# 00_config.R: 
+
+## Carga de librerías
 
 pkg <- c(
   
@@ -24,7 +26,7 @@ pkg <- c(
   "gt",
   ## Conversión de resultados estadísticos en tablas ordenadas (tidy)
   "broom",
-  ## Formato de porcentajes, ejes y escalas
+  ##
   "scales",
   
   # 4. Análisis de sensibilidad
@@ -36,3 +38,13 @@ pkg <- c(
 
 lapply(pkg, function (x){if(!require(x, character.only = T)){install.packages(x , character.only = T)}})
 rm(pkg)
+
+
+## Rutas del proyecto empleadas en Main.R
+
+PATH_PROYECTO <- "Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo"
+
+PATH_DATOS <- file.path(PATH_PROYECTO, "Datos")
+PATH_R <- file.path(PATH_DATOS, "R")
+PATH_RESULTS <- file.path(PATH_PROYECTO, "Results")
+
