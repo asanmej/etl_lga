@@ -1,0 +1,518 @@
+---
+title: "Factores maternos asociados a macrosomía neonatal: análisis descriptivo"
+author: "Inés García de la Peña Marco"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = TRUE,
+  warning = FALSE,
+  message = FALSE,
+  fig.width = 7,
+  fig.height = 5
+)
+```  
+ 
+# 1. Objetivo  
+
+# 2. Cargar el dataset de análisis
+```{r load-data}
+df <- read_csv(
+  file.path(PATH_TRANSFORMADOS, "dataset_analitico.csv")
+)
+```
+
+# 3. Preparación de datos
+
+```{r}
+# Pasar el peso del recién nacido de gramos a kg
+df <- df %>%
+  mutate(
+    peso_nacimiento = peso_nacimiento / 1000
+  )
+```
+
+## 3.2. Función para establecer el estilo de la tabla  
+```{r}
+tabla_estilo <- function(tabla){
+
+  tabla %>%
+    add_overall(last = FALSE) %>%
+    add_n() %>%
+    add_p(
+      test = list(
+        all_continuous() ~ "wilcox.test",
+        all_categorical() ~ "chisq.test"
+      )
+    ) %>%
+    modify_fmt_fun(
+      p.value ~ label_style_pvalue(digits = 3)
+      )%>%
+    bold_labels() %>%
+    bold_p(t = 0.05) %>%
+    italicize_levels()
+
+}
+
+tabla_estilo_strata <- function(tabla){
+
+  tabla %>%
+    add_n() %>%
+    add_p(
+      test = list(
+        all_continuous() ~ "wilcox.test",
+        all_categorical() ~ "chisq.test"
+      )
+    ) %>%
+    modify_fmt_fun(
+      p.value ~ label_style_pvalue(digits = 3)
+      )%>%
+    bold_labels() %>%
+    bold_p(t = 0.05) %>%
+    italicize_levels()
+
+}
+```  
+  
+## 3.3. Función para guardar las tablas  
+```{r}
+save_table <- function(tbl, filename){
+
+  tbl %>%
+    as_gt() %>%
+    gt::gtsave(
+      paste0(
+        "Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/Results/tablas/",
+        filename
+      )
+    )
+
+}
+```  
+  
+## 4. Tablas  
+  
+## 4.1. Tabla 1: Baseline characteristics according to maternal origin (Spain vs Foreign) and LGA status.
+
+```{r}
+tabla1 <- df %>%
+  select(
+
+    madre_extranjera,
+    macrosomia,
+
+    ## Maternal characteristics
+    edad,
+    talla,
+    peso_inicial,
+    imc_inicial,
+    ganancia_peso,
+    consumo_tabaco,
+    consumo_alcohol,
+
+    ## Pregnancy
+    edad_gestacional_nacimiento,
+    tipo_parto,
+
+    ## Neonatal
+    peso_nacimiento,
+    talla_nacimiento,
+    perimetro_craneal
+  ) %>%
+
+  tbl_strata(
+    strata = madre_extranjera,
+    .tbl_fun = ~ .x %>%
+
+      tbl_summary(
+        by = macrosomia,
+        missing = "no",
+        percent = "column",
+
+        statistic = list(
+          all_continuous() ~ "{median} ({p25}, {p75})"
+        ),
+
+        digits = all_continuous() ~ 2,
+
+        label = list(
+          edad ~ "Maternal age (years)",
+          talla ~ "Maternal height (cm)",
+          peso_inicial ~ "Initial maternal weight (kg)",
+          imc_inicial ~ "Initial BMI (kg/m²)",
+          ganancia_peso ~ "Gestational weight gain (kg)",
+          consumo_tabaco ~ "Smoking during pregnancy",
+          consumo_alcohol ~ "Alcohol consumption during pregnancy",
+
+          edad_gestacional_nacimiento ~ "Gestational age at birth (weeks)",
+          tipo_parto ~ "Mode of delivery",
+
+          peso_nacimiento ~ "Birth weight (kg)",
+          talla_nacimiento ~ "Birth length (cm)",
+          perimetro_craneal ~ "Head circumference (cm)"
+        )
+
+      ) %>%
+
+      tabla_estilo_strata()
+
+  ) %>%
+
+  modify_caption(
+    "**Table 1. Baseline maternal, pregnancy and neonatal characteristics according to maternal origin (Spain vs Foreign) and LGA status. Values are presented as Median (Q1, Q3) or n (%).**"
+  )
+
+tabla1
+
+save_table(tabla1, "Table1_Spain_vs_Foreign_LGA.html")
+```  
+  
+### 4.1.1. Tabla suplementaria S1:  Baseline characteristics according to maternal origin
+ 
+```{r}
+tablaS1 <- df %>%
+  select(
+    madre_extranjera,
+
+    ## Maternal characteristics
+    edad,
+    talla,
+    peso_inicial,
+    imc_inicial,
+    ganancia_peso,
+    consumo_tabaco,
+    consumo_alcohol,
+
+    ## Pregnancy
+    edad_gestacional_nacimiento,
+    tipo_parto,
+
+    ## Neonatal
+    peso_nacimiento,
+    talla_nacimiento,
+    perimetro_craneal,
+
+    ## Obstetric complications
+    diabetes_gestacional,
+    hipertension_gestacional,
+    preeclampsia,
+    eclampsia,
+
+    ## Prenatal care
+    semanas_primera_visita,
+    primera_visita_precoz,
+    n_visitas_embarazo,
+    visitas_esperadas,
+    porcentaje_visitas,
+    indice_kessner,
+    indice_apncu,
+
+    ## Healthcare utilisation
+    n_visitas_atencion_primaria,
+    n_visitas_hospitalarias
+
+  ) %>%
+
+  tbl_summary(
+    by = madre_extranjera,
+    missing = "no",
+    percent = "column",
+    statistic = list(
+      all_continuous() ~ "{median} ({p25}, {p75})"
+    ),
+    digits = all_continuous() ~ 2,
+    label = list(
+
+      edad ~ "Maternal age (years)",
+      talla ~ "Maternal height (cm)",
+      peso_inicial ~ "Initial maternal weight (kg)",
+      imc_inicial ~ "Initial BMI (kg/m²)",
+      ganancia_peso ~ "Gestational weight gain (kg)",
+      consumo_tabaco ~ "Smoking during pregnancy",
+      consumo_alcohol ~ "Alcohol consumption during pregnancy",
+
+      edad_gestacional_nacimiento ~ "Gestational age at birth (weeks)",
+      tipo_parto ~ "Mode of delivery",
+
+      peso_nacimiento ~ "Birth weight (kg)",
+      talla_nacimiento ~ "Birth length (cm)",
+      perimetro_craneal ~ "Head circumference (cm)",
+
+      diabetes_gestacional ~ "Gestational diabetes",
+      hipertension_gestacional ~ "Gestational hypertension",
+      preeclampsia ~ "Preeclampsia",
+      eclampsia ~ "Eclampsia",
+
+      semanas_primera_visita ~ "Gestational age at first prenatal visit (weeks)",
+      primera_visita_precoz ~ "Early prenatal care initiation",
+      n_visitas_embarazo ~ "Observed prenatal visits",
+      visitas_esperadas ~ "Expected prenatal visits (ACOG)",
+      porcentaje_visitas ~ "Observed/expected visits (%)",
+      indice_kessner ~ "Kessner index",
+      indice_apncu ~ "APNCU index",
+
+      n_visitas_atencion_primaria ~ "Primary care visits",
+      n_visitas_hospitalarias ~ "Hospital visits"
+    )
+  ) %>%
+
+  tabla_estilo() %>%
+  modify_table_body(
+    ~ .x %>%
+
+      dplyr::add_row(label = "**Maternal characteristics**", 
+                     row_type = "label", .before = 1) %>%
+
+      dplyr::add_row(label = "**Pregnancy**", row_type = "label", 
+                     .before = which(.$variable == "edad_gestacional_nacimiento")) %>%
+
+      dplyr::add_row(label = "**Neonatal characteristics**", row_type = "label",
+                     .before = which(.$variable == "peso_nacimiento")) %>%
+
+      dplyr::add_row(label = "**Maternal comorbidities**", row_type = "label",
+                     .before = which(.$variable == "diabetes_gestacional")) %>%
+
+      dplyr::add_row(label = "**Prenatal care adequacy**", row_type = "label",
+                     .before = which(.$variable == "semanas_primera_visita")) %>%
+
+      dplyr::add_row(label = "**Healthcare utilisation**", row_type = "label",
+                     .before = which(.$variable == "n_visitas_atencion_primaria"))
+  ) %>%
+
+  modify_caption(
+    "**Supplementary Table S1. Baseline maternal, pregnancy, neonatal characteristics, prenatal care adequacy and healthcare utilisation according to maternal origin. Values are presented as Median (Q1, Q3) or n (%).**"
+)
+
+tablaS1
+
+save_table(tablaS1, "Supplementary_Table_S1_Maternal_Origin.html")
+```  
+  
+## 4.2. Tabla 2: Baseline characteristics according to Global North vs Global South and LGA status
+```{r}
+tabla2 <- df %>%
+  select(
+
+    global_region,
+    macrosomia,
+
+    ## Maternal characteristics
+    edad,
+    talla,
+    peso_inicial,
+    imc_inicial,
+    ganancia_peso,
+    consumo_tabaco,
+    consumo_alcohol,
+
+    ## Pregnancy
+    edad_gestacional_nacimiento,
+    tipo_parto,
+
+    ## Neonatal
+    peso_nacimiento,
+    talla_nacimiento,
+    perimetro_craneal
+  ) %>%
+
+  tbl_strata(
+    strata = global_region,
+    .tbl_fun = ~ .x %>%
+
+      tbl_summary(
+        by = macrosomia,
+        missing = "no",
+        percent = "column",
+
+        statistic = list(
+          all_continuous() ~ "{median} ({p25}, {p75})"
+        ),
+
+        digits = all_continuous() ~ 2,
+
+        label = list(
+          edad ~ "Maternal age (years)",
+          talla ~ "Maternal height (cm)",
+          peso_inicial ~ "Initial maternal weight (kg)",
+          imc_inicial ~ "Initial BMI (kg/m²)",
+          ganancia_peso ~ "Gestational weight gain (kg)",
+          consumo_tabaco ~ "Smoking during pregnancy",
+          consumo_alcohol ~ "Alcohol consumption during pregnancy",
+
+          edad_gestacional_nacimiento ~ "Gestational age at birth (weeks)",
+          tipo_parto ~ "Mode of delivery",
+
+          peso_nacimiento ~ "Birth weight (kg)",
+          talla_nacimiento ~ "Birth length (cm)",
+          perimetro_craneal ~ "Head circumference (cm)"
+        )
+
+      ) %>%
+
+      tabla_estilo_strata()
+
+  ) %>%
+
+  modify_caption(
+    "**Table 2. Baseline characteristics according to gloval region (Global North vs Global South) and LGA status. Values are presented as Median (Q1, Q3) or n (%).**" 
+  )
+
+tabla2
+
+save_table(tabla2, "Table2_Global_Region_LGA.html")
+```
+
+## 4.3. Tabla 3: Maternal comorbidities associated with LGA
+
+```{r}
+tabla3 <- df %>%
+  select(
+    macrosomia,
+    diabetes_gestacional,
+    hipertension_gestacional,
+    preeclampsia,
+    eclampsia
+  ) %>%
+
+  tbl_summary(
+    by = macrosomia,
+    missing = "no",
+    percent = "column",
+
+    label = list(
+      diabetes_gestacional ~ "Gestational diabetes",
+      hipertension_gestacional ~ "Gestational hypertension",
+      preeclampsia ~ "Preeclampsia",
+      eclampsia ~ "Eclampsia"
+    )
+
+  ) %>%
+
+  tabla_estilo() %>%
+
+  modify_caption(
+    "**Table 3. Maternal comorbidities and pregnancy complications associated with LGA.**"
+  )
+
+tabla3
+
+save_table(tabla3, "Table3_Maternal_Diagnoses.html")
+```
+
+## 4.4. Tabla 4: Prenatal follow-up and healthcare utilisation
+```{r}
+tabla4 <- df %>%
+  select(
+    madre_extranjera ,
+    macrosomia,
+    
+    ## Prenatal follow-up
+    n_visitas_embarazo,
+    
+    ## Healthcare utilisation
+    n_visitas_atencion_primaria,
+    n_visitas_hospitalarias
+  ) %>%
+
+  tbl_strata(
+    strata = madre_extranjera,
+    .tbl_fun = ~ .x %>%
+
+      tbl_summary(
+        by = macrosomia,
+        missing = "no",
+        percent = "column",
+        statistic = list(
+          all_continuous() ~ "{median} ({p25}, {p75})"
+        ),
+
+        digits = all_continuous() ~ 2,
+
+        label = list(
+
+          n_visitas_embarazo ~ "Prenatal follow-up visits",
+          
+          n_visitas_atencion_primaria ~ "Primary care visits",
+
+          n_visitas_hospitalarias ~ "Hospital visits"
+        )
+      ) %>%
+
+      tabla_estilo_strata()
+
+  ) %>%
+
+  modify_caption(
+
+    "**Table 4. Prenatal follow-up and healthcare utilisation according to maternal origin and LGA status. Values are presented as Median (Q1, Q3).**"
+
+  )
+
+tabla4
+
+save_table(tabla4, "Table4_Prenatal_Follow_Up.html")
+```
+
+## 4.5. Tabla 5: Adequacy of prenatal care according to neonatal macrosomia.
+```{r}
+tabla5 <- df %>%
+  select(
+    macrosomia,
+    semanas_primera_visita,
+    primera_visita_precoz,
+    n_visitas_embarazo,
+    visitas_esperadas,
+    porcentaje_visitas,
+    indice_kessner,
+    indice_apncu
+  ) %>%
+
+  tbl_summary(
+    by = macrosomia,
+    missing = "no",
+    percent = "column",
+
+    statistic = list(
+      all_continuous() ~ "{median} ({p25}, {p75})"
+    ),
+
+    digits = all_continuous() ~ 2,
+
+    label = list(
+      semanas_primera_visita ~ "Gestational age at first prenatal visit (weeks)",
+      primera_visita_precoz ~ "Early prenatal care initiation",
+      n_visitas_embarazo ~ "Observed prenatal visits",
+      visitas_esperadas ~ "Expected prenatal visits (ACOG)",
+      porcentaje_visitas ~ "Observed/expected visits (%)",
+      indice_kessner ~ "Kessner index",
+      indice_apncu ~ "APNCU index"
+    )
+  ) %>%
+
+  tabla_estilo() %>%
+  modify_table_body(
+    ~ .x %>%
+      dplyr::add_row(
+        label = "**Timing of prenatal care**",row_type = "label",
+        .before = which(.$variable == "semanas_primera_visita")
+      ) %>%
+      dplyr::add_row(
+        label = "**Adequacy of prenatal care**",row_type = "label",
+        .before = which(.$variable == "n_visitas_embarazo")
+      )
+    ) %>%
+  
+  modify_caption(
+    "**Table 5. Adequacy of prenatal care according to neonatal macrosomia. Values are presented as Median (Q1, Q3) or n (%).**"
+  )
+
+tabla5
+
+save_table(tabla5, "Table5_Prenatal_Care_Adequacy.html")
+```  
