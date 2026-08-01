@@ -634,9 +634,9 @@ embarazo <- embarazo %>%
     imc_inicial,
     imc_final,
     consumo_tabaco,
-    consumo_alcohol,
-    id_hijo
-  )
+    consumo_alcohol
+  ) %>%
+  distinct(id_embarazo)
 
 # 17. Exportar la entidad EMBARAZO
 write_csv(
