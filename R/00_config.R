@@ -26,14 +26,20 @@ pkg <- c(
   "gt",
   ## Conversión de resultados estadísticos en tablas ordenadas (tidy)
   "broom",
-  ##
+  ## Formato de porcentajes, ejes y escalas
   "scales",
   
   # 4. Análisis de sensibilidad
   ## Emparejamiento mediante propensity score
   "MatchIt",
   ## Evaluación del balance entre grupos tras el emparejamiento
-  "cobalt"
+  "cobalt",
+  
+  # 5. Diagnóstico de modelos
+  "car", # vif()
+  "pscl", # pR2()
+  "ResourceSelection", # hoslem.test()
+  "pROC" # roc()
 )
 
 lapply(pkg, function (x){if(!require(x, character.only = T)){install.packages(x , character.only = T)}})
