@@ -51,17 +51,14 @@ ultimo_no_na <- function(x){
 }
 
 # 1. Cargar datos
-madre_cartilla <- read_delim(
-  "Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv_20240625/madre_cartilla.csv",
-  delim = "|", escape_double = FALSE, trim_ws = TRUE)
+madre_cartilla <- read_delim(FILE_MADRE_CARTILLA
+                             ,delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
-hijo_neosoft <- read_delim(
-  "Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv_20240508/hijo_neosoft.csv",
-  delim = "|", escape_double = FALSE, trim_ws = TRUE)
+hijo_neosoft <- read_delim(FILE_HIJO_NEOSOFT,
+                           delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
-hijo_demograficos <- read_delim(
-  "Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv20260616/hijo_demograficos.csv",
-  delim = "|", escape_double = FALSE, trim_ws = TRUE)
+hijo_demograficos <- read_delim(FILE_HIJO_DEMOGRAFICOS,
+                                delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
 # 2. Limpieza y filtrado inicial
 madre_cartilla <- madre_cartilla %>%  
