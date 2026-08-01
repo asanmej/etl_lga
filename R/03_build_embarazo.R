@@ -36,11 +36,11 @@
 # Los objetos hijo_neosoft, hijo_demograficos y embarazos_aux
 # se generan en 03_reconstruccion_embarazos.R
 
-madre_cartilla <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv20260616/madre_cartilla.csv", 
+madre_cartilla <- read_delim(FILE_MADRE_CARTILLA,
                              delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
 # Información clínica complementaria procedente de DGP
-madre_dgp <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv20260616/madre_dgp.csv", 
+madre_dgp <- read_delim(FILE_MADRE_DGP,
                         delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
 # 2. Limpieza y filtrado inicial
@@ -639,4 +639,7 @@ embarazo <- embarazo %>%
   )
 
 # 17. Exportar la entidad EMBARAZO
-write_csv(embarazo,"Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/embarazo.csv")
+write_csv(
+  embarazo,
+  file.path(PATH_TRANSFORMADOS,"embarazo.csv")
+)
