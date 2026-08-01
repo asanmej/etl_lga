@@ -107,7 +107,6 @@ embarazo <- madre_cartilla %>%
         orden_embarazo,
         fecha_parto,
         tipo_parto,
-        id_hijo, 
         fur,
         primera_visita_fecha
       ),
@@ -635,8 +634,7 @@ embarazo <- embarazo %>%
     imc_final,
     consumo_tabaco,
     consumo_alcohol
-  ) %>%
-  distinct(id_embarazo)
+  )  
 
 # 17. Exportar la entidad EMBARAZO
 write_csv(
