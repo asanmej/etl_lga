@@ -86,13 +86,14 @@ hijo <- hijo %>%
 hijo <- hijo %>% 
   rename(
     id_hijo = patient_id, 
-    edad_gestacional_nacimiento = edad_gestacional
+    edad_gestacional_nacimiento = edad_gestacional,
+    malformacion_cd = malformation_cd
   )
 
 # 7. Asociar cada recién nacido con el embarazo previamente reconstruido
 hijo <- hijo %>%
   left_join(
-    embarazo %>%
+    embarazos_aux %>%
       select(
         id_hijo,
         id_embarazo
@@ -118,11 +119,10 @@ hijo <- hijo %>%
     talla_nacimiento,
     perimetro_craneal,
     edad_gestacional_nacimiento,
-    malformation_cd,
+    malformacion_cd,
     muerte_neonatal,
     fecha_nacimiento
-  ) %>%
-  distinct() 
+  ) 
 
 # 10. Exportar la entidad HIJO
 write_csv(
