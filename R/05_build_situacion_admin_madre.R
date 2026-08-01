@@ -7,7 +7,7 @@
 # -----------------------------------------------------------------------------
 
 # 1. Importar la fuente de datos necesaria para construir la entidad
-madre_demograficos <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv_20240508/madre_demograficos.csv", 
+madre_demograficos <- read_delim(FILE_MADRE_DEMOGRAFICOS,
                                  delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
 # 2. Limpieza y filtrado inicial
@@ -138,4 +138,7 @@ situacion_admin_madre <- situacion_admin_madre %>%
   )
 
 # 13. Exportar la entidad SITUACION_ADMIN_MADRE 
-write_csv(situacion_admin_madre, "Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/situacion_admin_madre.csv")
+write_csv(
+  situacion_admin_madre, 
+  file.path(PATH_TRANSFORMADOS,"situacion_admin_madre.csv")
+)
