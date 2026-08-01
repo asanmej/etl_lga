@@ -10,7 +10,7 @@
 # -----------------------------------------------------------------------------
 
 # 1. Importar los datos principales de la entidad 
-hijo_demograficos <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv20260616/hijo_demograficos.csv", 
+hijo_demograficos <- read_delim(FILE_HIJO_DEMOGRAFICOS,
                                 delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
 # 2. Limpieza y estandarización de los datos
@@ -62,4 +62,7 @@ situacion_admin_hijo <- hijo_demograficos %>%
   ) 
 
 # 7. Exportar la entidad SITUACION_ADMIN_HIJO
-write_csv(situacion_admin_hijo, "Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/situacion_admin_hijo.csv")
+write_csv(
+  situacion_admin_hijo, 
+  file.path(PATH_TRANSFORMADOS,"situacion_admin_hijo.csv")
+)
