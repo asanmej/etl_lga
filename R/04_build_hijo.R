@@ -125,4 +125,7 @@ hijo <- hijo %>%
   distinct() 
 
 # 10. Exportar la entidad HIJO
-write_csv(hijo,"Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/hijo.csv")
+write_csv(
+  hijo,
+  file.path(PATH_TRANSFORMADOS,"hijo.csv")
+)
