@@ -11,16 +11,16 @@
 # -----------------------------------------------------------------------------
 
 # 1. Importación de las fuentes de datos
-madre_cartilla <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv_20240625/madre_cartilla.csv", 
+madre_cartilla <- read_delim(FILE_MADRE_CARTILLA, 
                              delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
-madre_demograficos <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv_20240508/madre_demograficos.csv", 
+madre_demograficos <- read_delim(FILE_MADRE_DEMOGRAFICOS, 
                                  delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
-madre_dgp <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv20260616/madre_dgp.csv", 
+madre_dgp <- read_delim(FILE_MADRE_DGP, 
                         delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
-hijo_neosoft <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv_20240508/hijo_neosoft.csv", 
+hijo_neosoft <- read_delim(FILE_HIJO_NEOSOFT, 
                            delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
 # 2. Limpieza, estandarización y filtrado inicial
@@ -139,4 +139,7 @@ madre <- madre %>%
   )
 
 # 6. Exportar la entidad MADRE
-write_csv(madre, "Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/madre.csv")
+write_csv(
+  madre, 
+  file.path(PATH_TRANSFORMADOS,"madre.csv")
+)
