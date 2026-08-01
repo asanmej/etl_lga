@@ -16,7 +16,7 @@
 # 1. Cargar entidades y limpieza
 
 ## 1.1. EMBARAZO
-embarazo <- read_csv(PATH_TRANSFORMADOS,"embarazo.csv")
+embarazo <- read_csv(file.path(PATH_TRANSFORMADOS, "embarazo.csv"))
 
 embarazo <- embarazo %>%
   mutate(
@@ -26,10 +26,10 @@ embarazo <- embarazo %>%
   )
 
 ## 1.2. MADRE
-madre <- read_csv(PATH_TRANSFORMADOS,"madre.csv")
+madre <- read_csv(file.path(PATH_TRANSFORMADOS,"madre.csv"))
 
 ## 1.3. HIJO
-hijo <- read_csv(PATH_TRANSFORMADOS,"hijo.csv")
+hijo <- read_csv(file.path(PATH_TRANSFORMADOS,"hijo.csv"))
 
 hijo <- hijo %>%
   mutate(
@@ -37,10 +37,10 @@ hijo <- hijo %>%
   )
 
 ## 1.4. USO_SERVICIO
-uso_servicio <- read_csv(PATH_TRANSFORMADOS,"uso_servicio.csv")
+uso_servicio <- read_csv(file.path(PATH_TRANSFORMADOS,"uso_servicio.csv"))
 
 ## 1.5. DIAGNOSTICO
-diagnostico <- read_csv(PATH_TRANSFORMADOS,"diagnostico.csv")
+diagnostico <- read_csv(file.path(PATH_TRANSFORMADOS,"diagnostico.csv"))
 
 diagnostico <- diagnostico %>%
   mutate(
@@ -48,7 +48,7 @@ diagnostico <- diagnostico %>%
   )
 
 ## 1.6. SITUACION_ADMIN_MADRE
-situacion_admin_madre <- read_csv(PATH_TRANSFORMADOS,"situacion_admin_madre.csv")
+situacion_admin_madre <- read_csv(file.path(PATH_TRANSFORMADOS,"situacion_admin_madre.csv"))
 
 #----------------------------------------------------
 
@@ -62,7 +62,6 @@ da_base <- embarazo %>%
   select(
     id_embarazo,
     id_madre,
-    id_hijo,
     fur,
     fecha_parto,
     primera_visita_fecha,
@@ -117,7 +116,7 @@ hijo_da <- hijo %>%
 da_base <- da_base %>%
   left_join(
     hijo_da,
-    by= c("id_embarazo", "id_hijo")
+    by= "id_embarazo"
   ) 
 
 ## 2.4. Uso de servicios
