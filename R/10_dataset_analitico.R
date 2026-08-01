@@ -34,7 +34,7 @@ hijo <- read_csv(PATH_TRANSFORMADOS,"hijo.csv")
 hijo <- hijo %>%
   mutate(
     fecha_nacimiento = ymd(fecha_nacimiento)
-    )
+  )
 
 ## 1.4. USO_SERVICIO
 uso_servicio <- read_csv(PATH_TRANSFORMADOS,"uso_servicio.csv")
@@ -348,9 +348,9 @@ DA <- DA %>%
       # Intermedio: Primera visita en segundo trimestre
       #             o inicio precoz pero seguimiento insuficiente
       (trimestre_primera_visita == "Segundo trimestre" |
-          (trimestre_primera_visita == "Primer trimestre" &
-             between(n_visitas_embarazo, 5, visitas_minimas_kessner - 1)
-          )
+         (trimestre_primera_visita == "Primer trimestre" &
+            between(n_visitas_embarazo, 5, visitas_minimas_kessner - 1)
+         )
       )
       ~ "Intermedio",
       
@@ -358,8 +358,9 @@ DA <- DA %>%
       #             o seguimiento insuficiente
       TRUE
       ~ "Inadecuado"
-    )
-  ) select(-visitas_minimas_kessner)
+    ) 
+  ) %>% 
+  select(-visitas_minimas_kessner)
 
 ### Factor ordenado
 DA <- DA %>%
@@ -622,10 +623,125 @@ DA <- DA %>%
     )
   )
 
+## 3.9. Clasificación global basada en Juárez et al. (Scientific Reports, 2025).
+
+# Se consideran Global North:
+# - España
+# - países de la UE28
+# - Canadá
+# - Estados Unidos
+
+# El resto de países se clasifican como Global South
+
+DA <- DA %>%
+  mutate(
+    # Origen materno
+    maternal_origin = factor(
+      case_when(
+        is.na(nacionalidad) ~ NA_character_,
+        str_to_upper(nacionalidad) %in% c("ESPAÑA","ESPANA") ~ "Spain",
+        TRUE ~ "Foreign"
+      ),
+      levels=c("Spain","Foreign")
+    ),
+    
+    # Global North / Global South (según Juárez et al.)
+    global_region = case_when(
+      
+      str_to_upper(nacionalidad) %in% c(
+        
+        # España
+        "ESPAÑA",
+        
+        # UE28
+        "RUMANIA",
+        "BULGARIA",
+        "FRANCIA",
+        "POLONIA",
+        "PORTUGAL",
+        "ITALIA",
+        "BELGICA",
+        "ALEMANIA",
+        "PAISES BAJOS",
+        "HUNGRIA",
+        "LITUANIA",
+        "REPUBLICA CHECA",
+        "ESLOVAQUIA",
+        "GRECIA",
+        "AUSTRIA",
+        "FINLANDIA",
+        "R.U.GRAN BRETAÑA E IRL N.",
+        
+        # Norteamérica (alto ingreso)
+        "CANADA",
+        "ESTADOS UNIDOS DE AMERICA"
+        
+      ) ~ "Global North",
+      
+      TRUE ~ "Global South"
+      
+    ),
+    
+    global_region = factor(
+      global_region,
+      levels = c("Global North", "Global South")
+    )
+  )
+
+# 3.10. Convertir a factor todas las variables binarias/categóricas
+DA <- DA %>%
+  mutate(
+    
+    consumo_tabaco = factor(consumo_tabaco,
+                            levels = c(0,1),
+                            labels = c("No","Yes")),
+    
+    consumo_alcohol = factor(consumo_alcohol,
+                             levels = c(0,1),
+                             labels = c("No","Yes")),
+    
+    macrosomia = factor(macrosomia,
+                        levels = c(0,1),
+                        labels = c("No","Yes")),
+    
+    primera_visita_precoz = factor(primera_visita_precoz,
+                                   levels = c(0,1),
+                                   labels = c("No","Yes")),
+    
+    madre_extranjera = factor(madre_extranjera,
+                              levels = c(0,1),
+                              labels = c("Spain","Foreign")),
+    
+    diabetes_gestacional = factor(diabetes_gestacional,
+                                  levels = c(FALSE, TRUE),
+                                  labels = c("No","Yes")),
+    
+    hipertension_gestacional = factor(hipertension_gestacional,
+                                      levels = c(FALSE, TRUE),
+                                      labels = c("No","Yes")),
+    
+    preeclampsia = factor(preeclampsia,
+                          levels = c(FALSE, TRUE),
+                          labels = c("No","Yes")),
+    
+    eclampsia = factor(eclampsia,
+                       levels = c(FALSE, TRUE),
+                       labels = c("No","Yes")),
+    
+    ganancia_excesiva_peso = factor(ganancia_excesiva_peso,
+                                    levels = c(0,1),
+                                    labels = c("No","Yes")),
+    
+    tipo_parto = factor(tipo_parto),
+    
+    tsi = factor(tsi),
+    
+    zbs = factor(zbs)
+  )
 #----------------------------------------------------
 
 # 4. Exportar dataset analítico
 write_csv(
   DA,
   file.path(PATH_TRANSFORMADOS,"dataset_analitico.csv")
-  )
+)
