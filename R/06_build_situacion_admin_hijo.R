@@ -1,41 +1,49 @@
-# Importar los datos principales de la entidad SITUACION_ADMIN_HIJO
-hijo_demograficos <- read_delim("Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/csv20260616/hijo_demograficos.csv", 
+# -----------------------------------------------------------------------------
+# ENTIDAD SITUACION_ADMIN_HIJO
+#
+# Objetivo:
+# Construir la información administrativa asociada a los recién nacidos
+# incluidos en la cohorte de estudio.
+#
+# Únicamente se conservan los recién nacidos presentes en la entidad HIJO,
+# garantizando la coherencia entre todas las entidades del modelo.
+# -----------------------------------------------------------------------------
+
+# 1. Importar los datos principales de la entidad 
+hijo_demograficos <- read_delim(FILE_HIJO_DEMOGRAFICOS,
                                 delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
-# Limpieza y estandarización de los datos
+# 2. Limpieza y estandarización de los datos
 hijo_demograficos <- hijo_demograficos %>%
   clean_names() %>% 
   distinct() %>% 
+  rename(
+    id_hijo = patient_id,
+    indice_privacion = ind_privacion
+  ) %>% 
   mutate(
     altabdu_dt = as.Date(altabdu_dt, format = "%d/%m/%Y"),
     bajabdu_dt = as.Date(bajabdu_dt, format = "%d/%m/%Y")
   )
 
-# Adaptar los nombres de los atributos a la nomenclatura definida en el modelo E/R
-# y filtramos empleando la entidad HIJO, ya que en Main.R se ha ejecutado primero.
-# Así conseguimos tener los recién nacidos de interés
-situacion_admin_hijo <- hijo_demograficos %>% 
-  rename(
-    id_hijo = patient_id,
-    indice_privacion = ind_privacion
-  ) %>%
+# 3. Filtrar los registros administrativos para conservar únicamente
+#    los recién nacidos presentes en la entidad HIJO
+situacion_admin_hijo <- hijo_demograficos %>%
   semi_join(
     hijo %>%
-      select(id_hijo),
+      distinct(id_hijo),
     by = "id_hijo"
-  )
-
-# Generar una clave primaria artificial para identificar de forma única
-# cada registro administrativo
-situacion_admin_hijo <- situacion_admin_hijo %>%
+  ) %>%
+  
+  # 4. Generar una clave primaria artificial para identificar de forma única
+  #    cada registro administrativo
   mutate(
     id_admin_hijo = row_number()
   ) %>%
-  relocate(id_admin_hijo)
-
-# Conservar únicamente las variables definidas para la entidad
-# SITUACION_ADMIN_HIJO
-situacion_admin_hijo <- situacion_admin_hijo %>%
+  relocate(id_admin_hijo) %>%
+  
+  # 5. Conservar únicamente las variables definidas para la entidad
+  #    SITUACION_ADMIN_HIJO y reordenarlas según el modelo E/R
   select(
     id_admin_hijo,
     id_hijo,
@@ -45,13 +53,16 @@ situacion_admin_hijo <- situacion_admin_hijo %>%
     altabdu_dt,
     bajabdu_dt,
     motivo_baja
-  )
-
-# Adaptar las fechas al formato YYYYMMDD definido para la exportación
-situacion_admin_hijo <- situacion_admin_hijo %>%
+  ) %>%
+  
+  # 6. Adaptar las fechas al formato definido (YYYYMMDD) para la exportación
   mutate(
     altabdu_dt = format(altabdu_dt, "%Y%m%d"),
     bajabdu_dt = format(bajabdu_dt, "%Y%m%d")
-  )
+  ) 
 
-write_csv(situacion_admin_hijo, "Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos_transformados/situacion_admin_hijo.csv")
+# 7. Exportar la entidad SITUACION_ADMIN_HIJO
+write_csv(
+  situacion_admin_hijo, 
+  file.path(PATH_TRANSFORMADOS,"situacion_admin_hijo.csv")
+)
