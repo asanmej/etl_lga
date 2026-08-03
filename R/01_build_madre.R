@@ -23,7 +23,24 @@ madre_dgp <- read_delim(FILE_MADRE_DGP,
 hijo_neosoft <- read_delim(FILE_HIJO_NEOSOFT, 
                            delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
+hijo_demograficos <- read_delim(FILE_HIJO_DEMOGRAFICOS, 
+                                delim = "|", escape_double = FALSE, trim_ws = TRUE)
+
 # 2. Limpieza, estandarización y filtrado inicial
+
+hijo_demograficos <- hijo_demograficos %>%  
+  clean_names() %>% # Convertir a formato estandar: minúsculas, sin tildes ni espacios
+  distinct() %>% # Eliminar duplicados
+  filter(!is.na(ano_nac) & !is.na(mes_nac))
+
+hijo_neosoft <- hijo_neosoft %>%
+  clean_names() %>% # Convertir a formato estandar: minúsculas, sin tildes ni espacios
+  distinct() %>% # Eliminar duplicados
+  inner_join(
+    hijo_demograficos,
+    by = "patient_id"
+  )
+
 madre_cartilla <- madre_cartilla %>%  
   clean_names() %>% # Convertir a formato estandar: minúsculas, sin tildes ni espacios
   distinct() %>% # Eliminar duplicados
