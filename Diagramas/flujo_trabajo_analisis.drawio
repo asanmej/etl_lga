@@ -1,0 +1,52 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/26.0.9 Chrome/128.0.6613.186 Electron/32.2.5 Safari/537.36" version="26.0.9">
+  <diagram name="Página-1" id="W_mj-RHDtOEGsnWJ4WXV">
+    <mxGraphModel dx="521" dy="1782" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="mquQhxw7jGt1Jp6rV-zr-14" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;fillColor=#000066;strokeColor=light-dark(#000066,#FFFFFF);exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" target="mquQhxw7jGt1Jp6rV-zr-52" edge="1">
+          <mxGeometry relative="1" as="geometry">
+            <mxPoint x="335" y="-890" as="sourcePoint" />
+            <mxPoint x="335" y="-850" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mquQhxw7jGt1Jp6rV-zr-54" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="mquQhxw7jGt1Jp6rV-zr-52" target="mquQhxw7jGt1Jp6rV-zr-53" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="mquQhxw7jGt1Jp6rV-zr-52" value="&lt;b&gt;ANÁLISIS DESCRIPTIVO&lt;/b&gt;&lt;div&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;b&gt;Tabla 1:&amp;nbsp;&lt;/b&gt;Características basales según el origen materno (España vs. Extranjero) y el estado de macrosomía&lt;/li&gt;&lt;/ul&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;b&gt;Tabla S1:&lt;/b&gt;&amp;nbsp;Características basales según el origen materno&lt;/li&gt;&lt;/ul&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;b&gt;Tabla 2:&lt;/b&gt;&amp;nbsp;Características de referencia según el estado del Norte Global frente al Sur Global y del LGA&lt;/li&gt;&lt;/ul&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;b&gt;Tabla 3:&lt;/b&gt;&amp;nbsp;Comorbilidades maternas asociadas con LGA&lt;/li&gt;&lt;/ul&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;b&gt;Tabla 4:&lt;/b&gt;&amp;nbsp;Seguimiento prenatal y utilización de los servicios de salud&lt;/li&gt;&lt;/ul&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;b&gt;Tabla 5:&lt;/b&gt;&amp;nbsp;Adecuación de la atención prenatal según la macrosomía neonatal&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=light-dark(#CCFFCC,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="145" y="-860" width="380" height="270" as="geometry" />
+        </mxCell>
+        <mxCell id="mquQhxw7jGt1Jp6rV-zr-59" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;exitX=0.5;exitY=1;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="mquQhxw7jGt1Jp6rV-zr-53" target="mquQhxw7jGt1Jp6rV-zr-55" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="mquQhxw7jGt1Jp6rV-zr-53" value="&lt;b&gt;MODELOS DE REGRESIÓN LOGÍSTICA&lt;/b&gt;&lt;br&gt;&lt;div&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;b&gt;Modelo 1:&amp;nbsp;&lt;/b&gt;Asociación entre origen materno y macrosomía&lt;/li&gt;&lt;/ul&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;b&gt;Modelo 2:&amp;nbsp;&lt;/b&gt;Asociación ajustada por factores maternos basales&lt;/li&gt;&lt;/ul&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;b&gt;Modelo 3:&amp;nbsp;&lt;/b&gt;Asociación ajustada por adecuación del seguimiento prenatal (índice de Kessner)&lt;/li&gt;&lt;/ul&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;b&gt;Modelo 4:&amp;nbsp;&lt;/b&gt;Asociación ajustada por adecuación del seguimiento prenatal (índice APNCU)&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=light-dark(#FFCCCC,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="162.5" y="-560" width="345" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="mquQhxw7jGt1Jp6rV-zr-55" value="&lt;b&gt;ANÁLISIS DE SENSIBILIDAD (PMS)&lt;/b&gt;&lt;div&gt;&lt;b style=&quot;text-align: left; background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;br&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;b style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; 1. Propensity Score Matching&lt;/b&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&amp;nbsp;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; (Nearest neighbour 1 Madre&amp;nbsp;española &lt;b&gt;:&lt;/b&gt; 1 Madre Extranjera)&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&lt;br&gt;&lt;/span&gt;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;b&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; 2.&amp;nbsp;&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Evaluación del equilibrio de covariables&lt;/span&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;:&lt;/span&gt;&lt;/b&gt;&lt;/div&gt;&lt;div&gt;&lt;ul&gt;&lt;li style=&quot;text-align: left;&quot;&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Diferencias de medias estandarizadas&lt;/span&gt;&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Love plot&lt;/li&gt;&lt;li style=&quot;text-align: left;&quot;&gt;Resumen de correspondencia&lt;/li&gt;&lt;/ul&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp;&lt;b&gt;3.&amp;nbsp;&lt;/b&gt;&lt;span style=&quot;background-color: transparent; text-align: center;&quot;&gt;&lt;b&gt;Reestimación de los modelos 1 a 4 utilizando la cohorte &lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&amp;nbsp; &amp;nbsp; &lt;span style=&quot;white-space: pre;&quot;&gt;&#x9;&lt;/span&gt;&amp;nbsp; &amp;nbsp; emparejada&lt;/b&gt;&lt;/span&gt;&lt;/div&gt;&lt;/div&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=light-dark(#E6D0DE,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="140" y="-320" width="390" height="200" as="geometry" />
+        </mxCell>
+        <mxCell id="mquQhxw7jGt1Jp6rV-zr-56" value="&lt;b&gt;DATASET ANALÍTICO&lt;/b&gt;&lt;div&gt;(dataset_analitico.csv)&lt;/div&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=light-dark(#D4E1F5,var(--ge-dark-color, #121212));strokeColor=light-dark(#663300,#FFFFFF);" parent="1" vertex="1">
+          <mxGeometry x="237.5" y="-930" width="195" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="mquQhxw7jGt1Jp6rV-zr-57" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;width=15.789473684210527;endSize=7.5052631578947375;fillColor=#FFCCCC;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="507.5" y="-455.53" as="sourcePoint" />
+            <mxPoint x="560" y="-456" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mquQhxw7jGt1Jp6rV-zr-58" value="&lt;div&gt;&lt;b&gt;Evaluación del rendimiento del modelo&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;ul&gt;&lt;li&gt;Factor de inflación de la varianza (VIF)&lt;/li&gt;&lt;/ul&gt;&lt;ul&gt;&lt;li&gt;Prueba de bondad de ajuste de Hosmer-Lemeshow&lt;/li&gt;&lt;/ul&gt;&lt;ul&gt;&lt;li&gt;Curva ROC y AUC&lt;/li&gt;&lt;/ul&gt;&lt;ul&gt;&lt;li&gt;Pseudo-R²&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=light-dark(#FFF0F8,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="560" y="-540" width="260" height="170" as="geometry" />
+        </mxCell>
+        <mxCell id="mquQhxw7jGt1Jp6rV-zr-60" value="" style="shape=flexArrow;endArrow=classic;html=1;rounded=0;width=15.789473684210527;endSize=7.5052631578947375;fillColor=#CCFFCC;" parent="1" edge="1">
+          <mxGeometry width="50" height="50" relative="1" as="geometry">
+            <mxPoint x="525" y="-725.53" as="sourcePoint" />
+            <mxPoint x="570" y="-726" as="targetPoint" />
+          </mxGeometry>
+        </mxCell>
+        <mxCell id="mquQhxw7jGt1Jp6rV-zr-61" value="&lt;div&gt;&lt;b&gt;Comparaciones estadísticas bivariadas&lt;/b&gt;&lt;/div&gt;&lt;div style=&quot;text-align: left;&quot;&gt;&lt;ul&gt;&lt;li&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Prueba de suma de rangos de Wilcoxon (variables continuas)&lt;/span&gt;&lt;/li&gt;&lt;/ul&gt;&lt;ul&gt;&lt;li&gt;&lt;span style=&quot;background-color: transparent; color: light-dark(rgb(0, 0, 0), rgb(255, 255, 255));&quot;&gt;Prueba de chi-cuadrado (variables categóricas)&lt;/span&gt;&lt;br&gt;&lt;/li&gt;&lt;/ul&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fillColor=light-dark(#F0FFF0,var(--ge-dark-color, #121212));" parent="1" vertex="1">
+          <mxGeometry x="570" y="-787.5" width="270" height="125" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
