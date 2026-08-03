@@ -51,47 +51,15 @@ ultimo_no_na <- function(x){
 }
 
 # 1. Cargar datos
-madre_cartilla <- read_delim(FILE_MADRE_CARTILLA
-                             ,delim = "|", escape_double = FALSE, trim_ws = TRUE)
-
-hijo_neosoft <- read_delim(FILE_HIJO_NEOSOFT,
-                           delim = "|", escape_double = FALSE, trim_ws = TRUE)
-
-hijo_demograficos <- read_delim(FILE_HIJO_DEMOGRAFICOS,
-                                delim = "|", escape_double = FALSE, trim_ws = TRUE)
+## madre_cartilla e hijo_neosoft cargados y filtrados en 01_build_madre.R
 
 # 2. Limpieza y filtrado inicial
 madre_cartilla <- madre_cartilla %>%  
-  clean_names() %>% # Convertir a formato estandar: minúsculas, sin tildes ni espacios
-  distinct() %>% # Eliminar duplicados
   mutate(
     # Conversión de variables de fecha a formato Date
     fecha_visita = as.Date(fecha_visita, format = "%d/%m/%Y"),
     fur = as.Date(fur, format = "%d/%m/%Y")
-  )  %>%
-  # Conservar únicamente las madres con al menos un recién nacido
-  # registrado en NeoSoft
-  filter(patient_id %in% hijo_neosoft$mother_patient_id)
-
-hijo_demograficos <- hijo_demograficos %>%
-  clean_names() %>%
-  distinct() %>%
-  filter(
-    !is.na(ano_nac),
-    !is.na(mes_nac)
-  ) %>%
-  # Conservar únicamente los recién nacidos cuyas madres forman parte
-  # de la cohorte definida a partir de la cartilla obstétrica y NeoSoft
-  filter(mother_patient_id %in% madre_cartilla$patient_id)
-
-hijo_neosoft <- hijo_neosoft %>%
-  clean_names() %>%
-  distinct() %>%
-  # Eliminamos los recién nacidos que no tienen registo de fecha de nacimiento y
-  # están en hijo_neosoft.csv pero no en hijo_demograficos.csv
-  semi_join(hijo_demograficos, by = "patient_id") %>%
-  filter(mother_patient_id %in% madre_cartilla$patient_id)
-
+  )
 
 # 3. Procesar la edad gestacional y estimar la fecha de inicio del embarazo
 
@@ -105,7 +73,7 @@ madre_cartilla <- madre_cartilla %>%
     
     edad_gestacional = str_replace_all(edad_gestacional, ",", "."),
     
-    edad_gestacional = str_replace_all(edad_gestacional, "día|días|dPP", "dias"),
+    edad_gestacional = str_replace_all(edad_gestacional, "día|días|dpp", "dias"),
     
     edad_gestacional = str_replace_all(edad_gestacional, "semana|semanas|s.g", "sem"),
     
@@ -132,11 +100,15 @@ madre_cartilla <- madre_cartilla %>%
       numeros,
       ~ if(length(.x) >= 2) as.numeric(.x[2]) else 0),
     
-    # Limpiar días imposibles
+    # Si se registra un número de días superior a 6 se considera
+    # un error de codificación y se asume 0 días adicionales
     dias = if_else(dias > 6, 0, dias),
     
     # Edad gestacional en días
     edad_gestacional_dias = semanas * 7 + dias,
+    
+    # Edad gestacional en semanas
+    edad_gestacional_sem = round(edad_gestacional_dias/7,1),
     
     # Fecha estimada de inicio del embarazo
     fecha_inicio_estimada =
@@ -397,6 +369,7 @@ embarazos_aux <- embarazos_aux %>%
 
 # Conservar únicamente los embarazos cuyo parto ocurrió dentro
 # del periodo de estudio (2018–2023)
+
 embarazos_aux <- embarazos_aux %>%
   filter(
     between(
