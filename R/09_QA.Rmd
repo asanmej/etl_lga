@@ -6,18 +6,16 @@ output:
   html_document:
     toc: true
     toc_float: true
-  pdf_document:
-    toc: true
 ---  
-
 # 1. Importación de librerias  
 ```{r}
 source("00_config.R")
-```  
-  
+```
+
 # 2. QA de cada entidad  
   
 ## 2.1. MADRE  
+
 En esta sección se evalúa la calidad de la entidad MADRE mediante comprobaciones de estructura, completitud, unicidad de identificadores, distribución de variables y consistencia de los datos.  
   
 Cargamos los datos transformados:  
@@ -1646,3 +1644,4 @@ tibble(
   )
 )
 ```
+
