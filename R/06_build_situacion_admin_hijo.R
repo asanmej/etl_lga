@@ -24,6 +24,10 @@ hijo_demograficos <- hijo_demograficos %>%
   mutate(
     altabdu_dt = as.Date(altabdu_dt, format = "%d/%m/%Y"),
     bajabdu_dt = as.Date(bajabdu_dt, format = "%d/%m/%Y")
+  ) %>%
+  inner_join(
+    hijo,
+    by = "id_hijo"
   )
 
 # 3. Filtrar los registros administrativos para conservar únicamente
