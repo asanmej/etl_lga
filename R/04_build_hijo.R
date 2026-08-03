@@ -34,7 +34,6 @@ hijo <- hijo_neosoft %>%
 #    nacimiento
 hijo <- hijo %>%
   mutate(
-    
     peso_nacimiento =
       if_else(
         peso_nacimiento < 500 |
@@ -66,13 +65,9 @@ fecha_nacimiento <- hijo_demograficos %>%
       15
     )
   ) %>%
+  select(patient_id, fecha_nacimiento) %>%
   filter(
-    between(year(fecha_nacimiento), 2018, 2023)
-  ) %>%
-  select(
-    patient_id,
-    fecha_nacimiento
-  )
+    between(year(fecha_nacimiento), 2018, 2023))
 
 # Incorporar la fecha de nacimiento a la entidad HIJO
 hijo <- hijo %>%
@@ -99,7 +94,8 @@ hijo <- hijo %>%
         id_embarazo
       ),
     by = "id_hijo"
-  )
+  ) %>%
+  distinct(id_hijo, .keep_all = TRUE)
 
 # 8. Conservar únicamente los hijos cuyo embarazo pertenece al periodo de estudio
 hijo <- hijo %>%
