@@ -33,27 +33,15 @@
 
 # 1. Importar los datos principales
 
-# Los objetos hijo_neosoft, hijo_demograficos y embarazos_aux
-# se generan en 03_reconstruccion_embarazos.R
-
-madre_cartilla <- read_delim(FILE_MADRE_CARTILLA,
-                             delim = "|", escape_double = FALSE, trim_ws = TRUE)
+# Los objetos madre_cartilla, hijo_neosoft e hijo_demograficos
+# proceden de 01_build_madre.R y son utilizados nuevamente tras la
+# reconstrucción realizada en 02_reconstruccion_embarazos.R
 
 # Información clínica complementaria procedente de DGP
 madre_dgp <- read_delim(FILE_MADRE_DGP,
                         delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
 # 2. Limpieza y filtrado inicial
-
-madre_cartilla <- madre_cartilla %>%  
-  clean_names() %>% 
-  distinct() %>% 
-  mutate(
-    fecha_visita = as.Date(fecha_visita, format = "%d/%m/%Y"),
-    fur = as.Date(fur, format = "%d/%m/%Y")
-  )  %>%
-  filter(patient_id %in% embarazos_aux$id_madre)
-
 madre_dgp <- madre_dgp %>%
   clean_names() %>%
   distinct() %>%
@@ -100,6 +88,7 @@ embarazo <- madre_cartilla %>%
     nacimientos_anteriores = primer_no_na(nacimientos_anteriores),
     .groups = "drop"
   ) %>%
+  distinct() %>%
   left_join(
     embarazos_aux %>%
       select(
@@ -155,6 +144,12 @@ embarazos_aux <- embarazos_aux %>%
       "id_madre",
       "orden_embarazo"
     )
+  )
+
+# Eliminamos los embarazos que no tienen fecha de parto
+embarazo <- embarazo %>%
+  filter(
+    !is.na(fecha_parto)
   )
 
 # 6. Para cada embarazo, seleccionar el registro de tabaco o alcohol del DGP
@@ -299,6 +294,7 @@ embarazo <- embarazo %>%
     )
     
   )
+
 ## Función para calcular los límites inferior y superior mediante el criterio IQR
 limites_iqr <- function(x){
   q1 <- quantile(x, 0.25, na.rm = TRUE)
@@ -494,53 +490,46 @@ TOLERANCIA_TALLA <- 1
 
 embarazo <- embarazo %>%
   mutate(
+    peso_inicial_original = peso_inicial,
+    peso_final_original   = peso_final,
     
     error_peso_inicial =
       !is.na(talla) &
-      !is.na(peso_inicial) &
-      abs(peso_inicial - talla) <= TOLERANCIA_TALLA,
+      !is.na(peso_inicial_original) &
+      abs(peso_inicial_original - talla) <= TOLERANCIA_TALLA,
     
     error_peso_final =
       !is.na(talla) &
-      !is.na(peso_final) &
-      abs(peso_final - talla) <= TOLERANCIA_TALLA
-    
+      !is.na(peso_final_original) &
+      abs(peso_final_original - talla) <= TOLERANCIA_TALLA
   ) %>%
-  
   mutate(
+    
     # Ambos pesos parecen corresponder a la talla
     peso_inicial = case_when(
-      error_peso_inicial &
-        error_peso_final
-      ~ NA_real_,
-      
-      error_peso_inicial
-      ~ peso_final,
-      TRUE
-      ~ peso_inicial
+      error_peso_inicial & error_peso_final ~ NA_real_,
+      error_peso_inicial & !error_peso_final ~ peso_final_original,
+      TRUE ~ peso_inicial_original
     ),
     
     peso_final = case_when(
-      error_peso_inicial &
-        error_peso_final
-      ~ NA_real_,
-      
-      error_peso_final
-      ~ peso_inicial,
-      TRUE
-      ~ peso_final
-    )
-  ) %>%
-  
-  mutate(
+      error_peso_inicial & error_peso_final ~ NA_real_,
+      !error_peso_inicial & error_peso_final ~ peso_inicial_original,
+      TRUE ~ peso_final_original
+    ),
+    
     ganancia_peso = peso_final - peso_inicial,
+    
     ganancia_peso = if_else(
       ganancia_peso < PERDIDA_MAX_PESO |
         ganancia_peso > GANANCIA_MAX_PESO,
-      
       NA_real_,
       ganancia_peso
     )
+  ) %>%
+  select(
+    -peso_inicial_original,
+    -peso_final_original
   )
 
 # 14. Completar antecedentes obstétricos:
@@ -585,8 +574,8 @@ embarazo <- embarazo %>%
     
     imc_inicial=
       if_else(
-        imc_inicial<12 |
-          imc_inicial>70,
+        imc_inicial<10 |
+          imc_inicial>80,
         
         NA_real_,
         imc_inicial
@@ -594,8 +583,8 @@ embarazo <- embarazo %>%
     
     imc_final=
       if_else(
-        imc_final<12 |
-          imc_final>70,
+        imc_final<10 |
+          imc_final>80,
         
         NA_real_,
         imc_final
@@ -607,14 +596,17 @@ embarazo <- embarazo %>%
     -peso_inicial_outlier,
     -peso_final_outlier,
     -peso_dgp_inicio,
-    -peso_dgp_final
+    -peso_dgp_final,
+    -error_peso_inicial,
+    -error_peso_final
   )
 
 # 16. Formatear las fechas y seleccionar las variables finales
 embarazo <- embarazo %>%
   mutate(
     fur = format(fur, "%Y%m%d"),
-    fecha_parto = format(fecha_parto, "%Y%m%d")
+    fecha_parto = format(fecha_parto, "%Y%m%d"),
+    primera_visita_fecha = format(primera_visita_fecha, "%Y%m%d")
   ) %>%
   select(
     id_embarazo,
