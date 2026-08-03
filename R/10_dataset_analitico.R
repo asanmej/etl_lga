@@ -205,13 +205,13 @@ DA <- DA %>%
 # y la primera visita prenatal
 DA <- DA %>%
   mutate(
-    semanas_primera_visita = as.numeric(
+    semanas_primera_visita = round(
       difftime(
         primera_visita_fecha,
         fur,
         units = "days"
       )
-    ) / 7
+    ) / 7, 1
   )
 
 ## 3.2 Inicio precoz del control prenatal
@@ -691,18 +691,6 @@ DA <- DA %>%
 DA <- DA %>%
   mutate(
     
-    consumo_tabaco = factor(consumo_tabaco,
-                            levels = c(0,1),
-                            labels = c("No","Yes")),
-    
-    consumo_alcohol = factor(consumo_alcohol,
-                             levels = c(0,1),
-                             labels = c("No","Yes")),
-    
-    macrosomia = factor(macrosomia,
-                        levels = c(0,1),
-                        labels = c("No","Yes")),
-    
     primera_visita_precoz = factor(primera_visita_precoz,
                                    levels = c(0,1),
                                    labels = c("No","Yes")),
@@ -710,22 +698,6 @@ DA <- DA %>%
     madre_extranjera = factor(madre_extranjera,
                               levels = c(0,1),
                               labels = c("Spain","Foreign")),
-    
-    diabetes_gestacional = factor(diabetes_gestacional,
-                                  levels = c(FALSE, TRUE),
-                                  labels = c("No","Yes")),
-    
-    hipertension_gestacional = factor(hipertension_gestacional,
-                                      levels = c(FALSE, TRUE),
-                                      labels = c("No","Yes")),
-    
-    preeclampsia = factor(preeclampsia,
-                          levels = c(FALSE, TRUE),
-                          labels = c("No","Yes")),
-    
-    eclampsia = factor(eclampsia,
-                       levels = c(FALSE, TRUE),
-                       labels = c("No","Yes")),
     
     ganancia_excesiva_peso = factor(ganancia_excesiva_peso,
                                     levels = c(0,1),
@@ -736,7 +708,8 @@ DA <- DA %>%
     tsi = factor(tsi),
     
     zbs = factor(zbs)
-  )
+  ) %>% 
+  distinct()
 #----------------------------------------------------
 
 # 4. Exportar dataset analítico
