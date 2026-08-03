@@ -88,7 +88,7 @@ save_table <- function(tbl, filename){
     as_gt() %>%
     gt::gtsave(
       paste0(
-        "Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/Results/tablas/",
+        "Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Results/tablas/",
         filename
       )
     )
@@ -516,3 +516,560 @@ tabla5
 
 save_table(tabla5, "Table5_Prenatal_Care_Adequacy.html")
 ```  
+  
+---  
+  
+# Tablas alternativas   
+Estas tablas descriptivas se construyen empleando las entidades del diagrama entidad-relación en vez de con el dataset de análisis.  
+  
+# 5. Construcción del dataset de análisis
+
+## 5.1. Variables derivadas
+
+```{r}
+df <- hijo %>%
+  left_join(embarazo, by = "id_embarazo") %>%
+  left_join(madre, by = "id_madre") %>%
+  left_join(uso_servicio, by = "id_embarazo") %>%
+  mutate(
+
+    # Outcome
+    LGA = factor(
+      if_else(peso_nacimiento >= 4000, "LGA", "No LGA"),
+      levels = c("No LGA", "LGA")
+    ),
+
+    # Maternal origin
+    foreign = factor(
+      if_else(nacionalidad == "ESPAÑA", "Spain", "Foreign"),
+      levels = c("Spain", "Foreign")
+    ),
+
+    global_region = case_when(
+  
+        nacionalidad %in% c(
+          "ESPAÑA",
+      
+          # Europa
+          "RUMANIA",
+          "BULGARIA",
+          "FRANCIA",
+          "POLONIA",
+          "UCRANIA",
+          "MOLDAVIA",
+          "PORTUGAL",
+          "ITALIA",
+          "FEDERACION RUSA",
+          "BELGICA",
+          "ALEMANIA",
+          "PAISES BAJOS",
+          "ARMENIA",
+          "BIELORRUSIA",
+          "HUNGRIA",
+          "LITUANIA",
+          "BOSNIA-HERZEGOVINA",
+          "GEORGIA",
+          "REPUBLICA CHECA",
+          "ALBANIA",
+          "TURQUIA",
+          "ESLOVAQUIA",
+          "LATVIA-LETONIA",
+          "GRECIA",
+          "SERBIA",
+          "AUSTRIA",
+          "FINLANDIA",
+          "R.U.GRAN BRETAÑA E IRL N.",
+      
+          # Norteamérica (alto ingreso)
+          "CANADA",
+          "ESTADOS UNIDOS DE AMERICA"
+        ) ~ "Global North",
+      
+        TRUE ~ "Global South"
+      
+      ),
+      
+      global_region = factor(
+        global_region,
+        levels = c("Global North", "Global South")
+      )
+  )
+
+
+df <- df %>%
+  mutate(
+
+    consumo_tabaco = factor(
+      consumo_tabaco,
+      levels = c(0,1),
+      labels = c("No","Yes")
+    ),
+
+    consumo_alcohol = factor(
+      consumo_alcohol,
+      levels = c(0,1),
+      labels = c("No","Yes")
+    ),
+
+    muerte_neonatal = factor(
+      muerte_neonatal,
+      levels = c(0,1),
+      labels = c("No","Yes")
+    )
+
+  )
+```
+
+## 5.2. Función para establecer el estilo de la tabla  
+```{r}
+tabla_estilo <- function(tabla){
+
+  tabla %>%
+    add_overall(last = FALSE) %>%
+    add_n() %>%
+    add_p(
+      test = list(
+        all_continuous() ~ "wilcox.test",
+        all_categorical() ~ "chisq.test"
+      )
+    ) %>%
+    bold_labels() %>%
+    bold_p(t = 0.05) %>%
+    italicize_levels()
+
+}
+
+tabla_estilo_strata <- function(tabla){
+
+  tabla %>%
+    add_n() %>%
+    add_p(
+      test = list(
+        all_continuous() ~ "wilcox.test",
+        all_categorical() ~ "chisq.test"
+      )
+    ) %>%
+    bold_labels() %>%
+    bold_p(t = 0.05) %>%
+    italicize_levels()
+
+}
+```  
+  
+## 5.3. Función para guardar las tablas  
+```{r}
+save_table <- function(tbl, filename){
+
+  tbl %>%
+    as_gt() %>%
+    gt::gtsave(
+      paste0(
+        "Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/Results/tablas/",
+        filename
+      )
+    )
+
+}
+```  
+  
+## 6. Tablas  
+  
+## 6.1. Tabla 1: Overall characteristics according to LGA.
+ 
+```{r}
+tabla1 <- df %>%
+  select(
+    LGA,
+    
+      ## Maternal characteristics
+      edad,
+      foreign,
+      talla,
+      peso_inicial,
+      imc_inicial,
+      ganancia_peso,
+      consumo_tabaco,
+      consumo_alcohol,
+    
+      ## Pregnancy
+      tipo_parto,
+    
+      ## Neonatal
+      peso_nacimiento,
+      talla_nacimiento,
+      perimetro_craneal,
+      edad_gestacional_nacimiento,
+      muerte_neonatal
+    ) %>%
+  
+  tbl_summary(
+    by = LGA,
+    missing = "no",
+    percent = "column",
+    statistic = list(
+      all_continuous() ~ "{median} ({p25}, {p75})"
+    ),
+  
+    digits = all_continuous() ~ 2,
+  
+    label = list(
+      edad ~ "Maternal age (years)",
+      foreign ~ "Maternal origin",
+      talla ~ "Maternal height (cm)",
+      peso_inicial ~ "Initial maternal weight (kg)",
+      imc_inicial ~ "Initial BMI (kg/m²)",
+      ganancia_peso ~ "Gestational weight gain (kg)",
+      consumo_tabaco ~ "Smoking during pregnancy",
+      consumo_alcohol ~ "Alcohol consumption during pregnancy",
+      tipo_parto ~ "Mode of delivery",
+      peso_nacimiento ~ "Birth weight (g)",
+      talla_nacimiento ~ "Birth length (cm)",
+      perimetro_craneal ~ "Head circumference (cm)",
+      edad_gestacional_nacimiento ~ "Gestational age at birth (weeks)",
+      muerte_neonatal ~ "Neonatal death"
+    )
+  ) %>%
+  
+  tabla_estilo() %>%
+  
+  modify_caption(
+    "**Table 1. Overall maternal, pregnancy and neonatal characteristics according to LGA status. Values are presented as Median (Q1, Q3) or n (%).**"
+  )
+
+tabla1
+
+save_table(tabla1, "Table1_LGA.html")
+```
+  
+## 6.2. Tabla 2: Baseline characteristics according to maternal origin (Spain vs Foreign) and LGA status.
+
+```{r}
+tabla2 <- df %>%
+  select(
+
+    foreign,
+    LGA,
+
+    ## Maternal characteristics
+    edad,
+    talla,
+    peso_inicial,
+    imc_inicial,
+    ganancia_peso,
+    consumo_tabaco,
+    consumo_alcohol,
+
+    ## Obstetric history
+    embarazos_anteriores,
+    nacimientos_anteriores,
+    abortos_anteriores,
+
+    ## Pregnancy
+    edad_gestacional_nacimiento,
+    tipo_parto,
+
+    ## Neonatal
+    peso_nacimiento,
+    talla_nacimiento,
+    perimetro_craneal,
+    muerte_neonatal
+
+  ) %>%
+
+  tbl_strata(
+    strata = foreign,
+    .tbl_fun = ~ .x %>%
+
+      tbl_summary(
+        by = LGA,
+        missing = "no",
+        percent = "column",
+
+        statistic = list(
+          all_continuous() ~ "{median} ({p25}, {p75})"
+        ),
+
+        digits = all_continuous() ~ 2,
+
+        label = list(
+          edad ~ "Maternal age (years)",
+          talla ~ "Maternal height (cm)",
+          peso_inicial ~ "Initial maternal weight (kg)",
+          imc_inicial ~ "Initial BMI (kg/m²)",
+          ganancia_peso ~ "Gestational weight gain (kg)",
+          consumo_tabaco ~ "Smoking during pregnancy",
+          consumo_alcohol ~ "Alcohol consumption during pregnancy",
+
+          embarazos_anteriores ~ "Previous pregnancies",
+          nacimientos_anteriores ~ "Previous live births",
+          abortos_anteriores ~ "Previous miscarriages",
+
+          edad_gestacional_nacimiento ~ "Gestational age at birth (weeks)",
+          tipo_parto ~ "Mode of delivery",
+
+          peso_nacimiento ~ "Birth weight (g)",
+          talla_nacimiento ~ "Birth length (cm)",
+          perimetro_craneal ~ "Head circumference (cm)",
+          muerte_neonatal ~ "Neonatal death"
+        )
+
+      ) %>%
+
+      tabla_estilo_strata()
+
+  ) %>%
+
+  modify_caption(
+    "**Table 2. Baseline maternal, pregnancy and neonatal characteristics according to maternal origin (Spain vs Foreign) and LGA status. Values are presented as Median (Q1, Q3) or n (%).**"
+  )
+
+tabla2
+
+save_table(tabla2, "Table2_Spain_vs_Foreign_LGA.html")
+```
+
+## 6.3. Tabla 3: Baseline characteristics according to Global North vs Global South and LGA status
+```{r}
+tabla3 <- df %>%
+  select(
+
+    global_region,
+    LGA,
+
+    ## Maternal characteristics
+    edad,
+    talla,
+    peso_inicial,
+    imc_inicial,
+    ganancia_peso,
+    consumo_tabaco,
+    consumo_alcohol,
+
+    ## Obstetric history
+    embarazos_anteriores,
+    nacimientos_anteriores,
+    abortos_anteriores,
+
+    ## Pregnancy
+    edad_gestacional_nacimiento,
+    tipo_parto,
+
+    ## Neonatal
+    peso_nacimiento,
+    talla_nacimiento,
+    perimetro_craneal,
+    muerte_neonatal
+
+  ) %>%
+
+  tbl_strata(
+    strata = global_region,
+    .tbl_fun = ~ .x %>%
+
+      tbl_summary(
+        by = LGA,
+        missing = "no",
+        percent = "column",
+
+        statistic = list(
+          all_continuous() ~ "{median} ({p25}, {p75})"
+        ),
+
+        digits = all_continuous() ~ 2,
+
+        label = list(
+          edad ~ "Maternal age (years)",
+          talla ~ "Maternal height (cm)",
+          peso_inicial ~ "Initial maternal weight (kg)",
+          imc_inicial ~ "Initial BMI (kg/m²)",
+          ganancia_peso ~ "Gestational weight gain (kg)",
+          consumo_tabaco ~ "Smoking during pregnancy",
+          consumo_alcohol ~ "Alcohol consumption during pregnancy",
+
+          embarazos_anteriores ~ "Previous pregnancies",
+          nacimientos_anteriores ~ "Previous live births",
+          abortos_anteriores ~ "Previous miscarriages",
+
+          edad_gestacional_nacimiento ~ "Gestational age at birth (weeks)",
+          tipo_parto ~ "Mode of delivery",
+
+          peso_nacimiento ~ "Birth weight (g)",
+          talla_nacimiento ~ "Birth length (cm)",
+          perimetro_craneal ~ "Head circumference (cm)",
+          muerte_neonatal ~ "Neonatal death"
+        )
+
+      ) %>%
+
+      tabla_estilo_strata()
+
+  ) %>%
+
+  modify_caption(
+    "**Table 3. Baseline characteristics according to maternal origin (Global North vs Global South) and LGA status. Values are presented as Median (Q1, Q3) or n (%).**" 
+  )
+
+tabla3
+
+save_table(tabla3, "Table3_Global_Region_LGA.html")
+```
+
+## 6.4. Tabla 4: Maternal comorbidities associated with LGA
+
+```{r}
+diag_madre <- diagnostico %>%
+  filter(tipo_paciente == "Madre") %>%
+  mutate(
+    txt = str_to_upper(diag_st),
+
+    diabetes =
+      str_detect(txt, "DIABETES") &
+      !str_detect(txt, "GESTACIONAL"),
+
+    gestational_diabetes =
+      str_detect(txt, "DIABETES GESTACIONAL"),
+
+    hypertension =
+      str_detect(txt, "HIPERTENS") &
+      !str_detect(txt, "GESTACIONAL"),
+
+    gestational_hypertension =
+      str_detect(txt, "HIPERTENSION GESTACIONAL"),
+
+    preeclampsia =
+      str_detect(txt, "PREECLAMP"),
+
+    eclampsia =
+      str_detect(txt, "ECLAMP")
+  ) %>%
+
+  group_by(id_paciente) %>%
+
+  summarise(
+    diabetes = any(diabetes),
+    gestational_diabetes = any(gestational_diabetes),
+    hypertension = any(hypertension),
+    gestational_hypertension = any(gestational_hypertension),
+    preeclampsia = any(preeclampsia),
+    eclampsia = any(eclampsia),
+
+    .groups = "drop"
+  )
+
+tabla4A <- df %>%
+
+  left_join(
+    diag_madre,
+    by = c("id_madre" = "id_paciente")
+  ) %>%
+
+  mutate(
+    across(
+      c(
+        diabetes,
+        gestational_diabetes,
+        hypertension,
+        gestational_hypertension,
+        preeclampsia,
+        eclampsia
+      ),
+      ~replace_na(.x, FALSE)
+    )
+  ) %>%
+
+  select(
+    LGA,
+
+    diabetes,
+    gestational_diabetes,
+
+    hypertension,
+    gestational_hypertension,
+
+    preeclampsia,
+    eclampsia
+
+  ) %>%
+
+  tbl_summary(
+    by = LGA,
+    missing = "no",
+    percent = "column",
+
+    label = list(
+      diabetes ~ "Pregestational diabetes",
+      gestational_diabetes ~ "Gestational diabetes",
+      hypertension ~ "Chronic hypertension",
+      gestational_hypertension ~ "Gestational hypertension",
+      preeclampsia ~ "Preeclampsia",
+      eclampsia ~ "Eclampsia"
+    )
+
+  ) %>%
+
+  tabla_estilo() %>%
+
+  modify_caption(
+    "**Table 4A. Maternal comorbidities and pregnancy complications associated with LGA.**"
+  )
+
+tabla4A
+
+save_table(tabla4A, "Table4A_Maternal_Diagnoses.html")
+```
+
+## 6.6. Tabla 5: Prenatal follow-up and healthcare utilisation
+```{r}
+tabla5 <- df %>%
+  select(
+    foreign,
+    LGA,
+    
+    ## Prenatal follow-up
+    n_visitas_embarazo,
+
+    ## Healthcare utilisation
+    n_visitas_atencion_primaria,
+    n_visitas_hospitalarias
+
+  ) %>%
+
+  tbl_strata(
+    strata = foreign,
+    .tbl_fun = ~ .x %>%
+
+      tbl_summary(
+        by = LGA,
+        missing = "no",
+        percent = "column",
+        statistic = list(
+          all_continuous() ~ "{median} ({p25}, {p75})"
+        ),
+
+        digits = all_continuous() ~ 2,
+
+        label = list(
+
+          n_visitas_embarazo ~ "Prenatal follow-up visits",
+          
+          n_visitas_atencion_primaria ~ "Primary care visits",
+
+          n_visitas_hospitalarias ~ "Hospital visits"
+        )
+      ) %>%
+
+      tabla_estilo_strata()
+
+  ) %>%
+
+  modify_caption(
+
+    "**Table 5. Prenatal follow-up and healthcare utilisation according to maternal origin and LGA status. Values are presented as Median (Q1, Q3).**"
+
+  )
+
+tabla5
+
+save_table(tabla5, "Table5_Prenatal_Follow_Up.html")
+```
+
