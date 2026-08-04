@@ -109,7 +109,7 @@ uso_servicio <- embarazos_aux %>%
 # La tabla madre_cartilla ya ha sido cargada y depurada en
 # 02_reconstruccion_embarazos.R, por lo que se reutiliza directamente
 visitas_embarazo <- madre_cartilla %>%
-  distinct(patient_id, fur, fecha_visita) %>%
+  distinct(id_madre, fur, fecha_visita) %>%
   left_join(
     embarazos_aux %>%
       select(
@@ -118,7 +118,7 @@ visitas_embarazo <- madre_cartilla %>%
         fur
       ),
     by = c(
-      "patient_id" = "id_madre",
+      "id_madre",
       "fur"
     )
   ) %>%
