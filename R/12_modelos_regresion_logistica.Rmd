@@ -25,6 +25,9 @@ DA <- read_csv(
 # (o respecto a la categoría de referencia en variables categóricas).
 
 obtener_OR <- function(modelo){
+  
+  IC <- confint.default(modelo) 
+  
   exp(
     cbind(
       OR = coef(modelo),
@@ -38,29 +41,31 @@ obtener_OR <- function(modelo){
 ```{r}
 diagnostico_modelo <- function(modelo, datos){
 
-  # Variance Inflation Factor: Para detectar multicolinealidad (variables que
-  # prácticamente están diciendo lo mismo. ej: peso e imc)
-  cat("VIF\n")
-  print(car::vif(modelo))
-
   # Pseudo R: medida del rendimiento global del modelo (permite comparar modelos)
   # Ej: modelo 1: R=0.12 y modelo 2: R=0.18 --> El modelo 2 ha mejorado
   cat("\n-----------------------------\n")
   cat("Pseudo R^2\n")
-  print(pscl::pR2(modelo))
+  # Comprobamos si el modelo tiene pesos para evitar el error de longitudes
+  if (is.null(modelo$prior.weights)) {
+    print(pscl::pR2(modelo))
+  } else {
+    message("Nota: Pseudo R^2 omitido automáticamente debido al uso de pesos (PSM).")
+  }
 
   # Hosmer-Lemeshow: Comprueba si las probabilidades predichas por el 
   # modelo se parecen a las observadas (test de calibración).
   # Ej: Ho: El modelo ajusta bien --> Si p>0.05 el modelo es bueno
-  cat("\n-----------------------------\n")
-  cat("Hosmer-Lemeshow\n")
-  print(
-    ResourceSelection::hoslem.test(
-      modelo$y,
-      fitted(modelo),
-      g = 10
+  if (is.null(modelo$prior.weights)) {
+    cat("\n-----------------------------\n")
+    cat("Hosmer-Lemeshow\n")
+    print(
+      ResourceSelection::hoslem.test(
+        modelo$y,
+        fitted(modelo),
+        g = 5
+      )
     )
-  )
+  }
 
   # ROC: Mide la capacidad del modelo para distinguir correctamente 
   # entre individuos con y sin el evento.
@@ -69,7 +74,7 @@ diagnostico_modelo <- function(modelo, datos){
   cat("\n-----------------------------\n")
   cat("ROC\n")
   roc_modelo <- pROC::roc(
-    response = datos$macrosomia,
+    response = modelo$y,
     predictor = fitted(modelo)
   )
   print(roc_modelo)
@@ -85,6 +90,7 @@ Se construyeron cuatro modelos de regresión logística de forma jerárquica.
 - El **Modelo 1** estimó la asociación cruda entre el origen materno y la macrosomía neonatal. 
 - El **Modelo 2** ajustó dicha asociación por potenciales factores de confusión maternos. 
 - Finalmente, los **Modelos 3 y 4** incorporaron dos medidas alternativas de adecuación del seguimiento prenatal (índices de Kessner y APNCU) con el fin de evaluar la robustez de la asociación observada.
+  
 
 ## 2.1. Modelo 1: Asociación entre origen materno y macrosomía 
 **Objetivo:** Evaluar si existe una asociación entre el origen materno y el riesgo de macrosomía.
@@ -94,12 +100,13 @@ Se construyeron cuatro modelos de regresión logística de forma jerárquica.
   
 ```{r}
 modelo1 <- glm(
-  macrosomia ~ madre_extranjera,
+  lga_p97 ~ madre_extranjera,
   data = DA,
-  family = binomial(link = "logit")
+  family = "binomial", 
+  y=TRUE
 )
 
-summary(modelo1)
+tbl_regression(modelo1, exponentiate = T)
 
 obtener_OR(modelo1)
 
@@ -107,31 +114,22 @@ tbl_modelo1 <- tbl_regression(
     modelo1,
     exponentiate = TRUE,
     label = list(
-    madre_extranjera ~ "Foreign mother",
+    madre_extranjera ~ "Foreign mother"
   )
   )
 
 diagnostico_modelo(modelo1, DA)
-```
-
-## 2.2. Modelo 2: Asociación ajustada por factores maternos basales
-
-**Objetivo:** Estimar la asociación entre el origen materno y la macrosomía ajustando por características maternas presentes antes o al inicio del embarazo que podrían actuar como factores de confusión. 
+```  
+  
+## 2.2. Modelo 2: Asociación ajustada por adecuación del seguimiento prenatal (índice de Kessner)
+**Objetivo:** Evaluar si la asociación entre el origen materno y la macrosomía persiste tras considerar la adecuación del seguimiento prenatal medida mediante el índice de Kessner.  
   
 ```{r}
 modelo2 <- glm(
-  macrosomia ~
-    madre_extranjera +
-    edad +
-    imc_inicial +
-    talla + # Ejecutar y si VIF < 3 se queda
-    ganancia_peso + # No sé si incluirla
-    consumo_tabaco +
-    consumo_alcohol +
-    embarazos_anteriores +
-    indice_privacion,
+  lga_p97 ~ madre_extranjera + indice_kessner,
   data = DA,
-  family = binomial(link = "logit")
+  family = "binomial",
+  y=TRUE
 )
 
 summary(modelo2)
@@ -143,38 +141,21 @@ tbl_modelo2 <- tbl_regression(
     exponentiate = TRUE,
     label = list(
     madre_extranjera ~ "Foreign mother",
-    edad ~ "Maternal age",
-    talla ~ "Maternal height",
-    imc_inicial ~ "Initial BMI",
-    ganancia_peso ~ "Gestational weight gain",
-    consumo_tabaco ~ "Smoking",
-    consumo_alcohol ~ "Alcohol consumption",
-    embarazos_anteriores ~ "Previous pregnancies",
-    indice_privacion ~ "Deprivation index"
+    indice_kessner ~ "Kessner index"
   )
   )
 
 diagnostico_modelo(modelo2, DA)
-```
+```  
   
-## 2.3. Modelo 3: Asociación ajustada por adecuación del seguimiento prenatal (índice de Kessner)
-**Objetivo:** Evaluar si la asociación entre el origen materno y la macrosomía persiste tras considerar la adecuación del seguimiento prenatal medida mediante el índice de Kessner.  
-  
+## 2.3. Modelo 3: Asociación ajustada por adecuación del seguimiento prenatal (índice APNCU)  
+**Objetivo:** Confirmar la robustez de los resultados utilizando una medida alternativa de adecuación del seguimiento prenatal (índice APNCU)  
 ```{r}
 modelo3 <- glm(
-  macrosomia ~
-    madre_extranjera +
-    edad +
-    imc_inicial +
-    talla + # Ejecutar y si VIF < 3 se queda
-    ganancia_peso + # No sé si incluirla
-    consumo_tabaco +
-    consumo_alcohol +
-    embarazos_anteriores +
-    indice_privacion +
-    indice_kessner,
+  lga_p97 ~ madre_extranjera + indice_apncu,
   data = DA,
-  family = binomial(link = "logit")
+  family = "binomial",
+  y=TRUE
 )
 
 summary(modelo3)
@@ -186,62 +167,12 @@ tbl_modelo3 <- tbl_regression(
     exponentiate = TRUE,
     label = list(
     madre_extranjera ~ "Foreign mother",
-    edad ~ "Maternal age",
-    talla ~ "Maternal height",
-    imc_inicial ~ "Initial BMI",
-    ganancia_peso ~ "Gestational weight gain",
-    consumo_tabaco ~ "Smoking",
-    consumo_alcohol ~ "Alcohol consumption",
-    embarazos_anteriores ~ "Previous pregnancies",
-    indice_privacion ~ "Deprivation index",
-    indice_kessner ~ "Kessner index"
-  )
-  )
-
-diagnostico_modelo(modelo3, DA)
-```
-
-## 2.4. Modelo 4: Asociación ajustada por adecuación del seguimiento prenatal (índice APNCU)  
-**Objetivo:** Confirmar la robustez de los resultados utilizando una medida alternativa de adecuación del seguimiento prenatal (índice APNCU).
-```{r}
-modelo4 <- glm(
-  macrosomia ~
-    madre_extranjera +
-    edad +
-    imc_inicial +
-    talla + # Ejecutar y si VIF < 3 se queda
-    ganancia_peso + # No sé si incluirla
-    consumo_tabaco +
-    consumo_alcohol +
-    embarazos_anteriores +
-    indice_privacion +
-    indice_apncu,
-  data = DA,
-  family = binomial(link = "logit")
-)
-
-summary(modelo4)
-
-obtener_OR(modelo4)
-
-tbl_modelo4 <- tbl_regression(
-    modelo4,
-    exponentiate = TRUE,
-    label = list(
-    madre_extranjera ~ "Foreign mother",
-    edad ~ "Maternal age",
-    talla ~ "Maternal height",
-    imc_inicial ~ "Initial BMI",
-    ganancia_peso ~ "Gestational weight gain",
-    consumo_tabaco ~ "Smoking",
-    consumo_alcohol ~ "Alcohol consumption",
-    embarazos_anteriores ~ "Previous pregnancies",
-    indice_privacion ~ "Deprivation index",
     indice_apncu ~ "APNCU index"
   )
   )
 
-diagnostico_modelo(modelo4, DA)
+diagnostico_modelo(modelo3, DA)
+
 ```  
   
 # 3. Tabla resumen  
@@ -250,14 +181,12 @@ tabla_modelos <- tbl_merge(
   tbls = list(
     tbl_modelo1,
     tbl_modelo2,
-    tbl_modelo3,
-    tbl_modelo4
+    tbl_modelo3
   ),
   tab_spanner = c(
     "**Model 1**",
-    "**Model 2**",
-    "**Model 3 (Kessner)**",
-    "**Model 4 (APNCU)**"
+    "**Model 2 (Kessner)**",
+    "**Model 3 (APNCU)**"
   )
 ) %>%
   bold_labels() %>%
@@ -277,21 +206,16 @@ Con el objetivo de evaluar la robustez de los resultados obtenidos en el anális
 El propensity score se estimó mediante un modelo de regresión logística que incluía únicamente variables basales disponibles antes o al inicio del embarazo (edad materna, IMC inicial, talla, antecedentes obstétricos, consumo de tabaco y alcohol, índice de privación, TSI y zona básica de salud). 
   
 ```{r}
-
 # 1. Seleccionar variables
-
 DA_psm <- DA %>%
   select(
     madre_extranjera,
     edad,
     imc_inicial,
-    talla,
-    embarazos_anteriores,
     nacimientos_anteriores,
     abortos_anteriores,
     consumo_tabaco,
     consumo_alcohol,
-    indice_privacion,
     tsi,
     zbs,
    
@@ -306,13 +230,10 @@ DA_psm <- DA_psm %>%
       madre_extranjera,
       edad,
       imc_inicial,
-      talla,
-      embarazos_anteriores,
       nacimientos_anteriores,
       abortos_anteriores,
       consumo_tabaco,
       consumo_alcohol,
-      indice_privacion,
       tsi,
       zbs
     )
@@ -324,13 +245,10 @@ match_ps <- matchit(
   madre_extranjera ~
     edad +
     imc_inicial +
-    talla +
-    embarazos_anteriores +
     nacimientos_anteriores +
     abortos_anteriores +
     consumo_tabaco +
     consumo_alcohol +
-    indice_privacion +
     tsi +
     zbs,
 
@@ -361,16 +279,17 @@ DA_match <- match.data(match_ps)
 # 7. Comprobar tamaño final
 table(DA_match$madre_extranjera)
 nrow(DA_match)
-
 ```
 
 ## 4.1. Modelo 1: Asociación entre origen materno y macrosomía 
  
 ```{r}
 modelo1_psm <- glm(
-  macrosomia ~ madre_extranjera,
+  lga_p97 ~ madre_extranjera,
   data = DA_match,
-  family = binomial(link = "logit")
+  family = "binomial",
+  weights= DA_match$weights,
+  y=TRUE
 )
 
 summary(modelo1_psm)
@@ -386,24 +305,17 @@ tbl_modelo1_psm <- tbl_regression(
   )
 
 diagnostico_modelo(modelo1_psm, DA_match)
-```
-
-## 4.2. Modelo 2: Asociación ajustada por factores maternos basales
-
+```   
+  
+## 4.2. Modelo 2: Asociación ajustada por adecuación del seguimiento prenatal (índice de Kessner)  
+  
 ```{r}
 modelo2_psm <- glm(
-  macrosomia ~
-    madre_extranjera +
-    edad +
-    talla +
-    imc_inicial +
-    ganancia_peso +
-    consumo_tabaco +
-    consumo_alcohol +
-    embarazos_anteriores +
-    indice_privacion,
+  lga_p97 ~ madre_extranjera + indice_kessner,
   data = DA_match,
-  family = binomial(link = "logit")
+  family = "binomial",
+  weights= DA_match$weights,
+  y=TRUE
 )
 
 summary(modelo2_psm)
@@ -415,105 +327,39 @@ tbl_modelo2_psm <- tbl_regression(
     exponentiate = TRUE,
     label = list(
     madre_extranjera ~ "Foreign mother",
-    edad ~ "Maternal age",
-    talla ~ "Maternal height",
-    imc_inicial ~ "Initial BMI",
-    ganancia_peso ~ "Gestational weight gain",
-    consumo_tabaco ~ "Smoking",
-    consumo_alcohol ~ "Alcohol consumption",
-    embarazos_anteriores ~ "Previous pregnancies",
-    indice_privacion ~ "Deprivation index"
+    indice_kessner ~ "Kessner index"
   )
   )
 
 diagnostico_modelo(modelo2_psm, DA_match)
 ```
-  
-## 4.3. Modelo 3: Asociación ajustada por adecuación del seguimiento prenatal (índice de Kessner)
+ 
+## 4.3. Modelo 3: Asociación ajustada por adecuación del seguimiento prenatal (índice de APNCU)   
   
 ```{r}
 modelo3_psm <- glm(
-  macrosomia ~
-    madre_extranjera +
-    edad +
-    imc_inicial +
-    talla + # Ejecutar y si VIF < 3 se queda
-    ganancia_peso + # No sé si incluirla
-    consumo_tabaco +
-    consumo_alcohol +
-    embarazos_anteriores +
-    indice_privacion +
-    indice_kessner,
+  lga_p97 ~ madre_extranjera + indice_apncu,
   data = DA_match,
-  family = binomial(link = "logit")
+  family = "binomial",
+  weights= DA_match$weights,
+  y=TRUE
 )
 
 summary(modelo3_psm)
 
 obtener_OR(modelo3_psm)
 
-tbl_modelo3_psm <- tbl_regression(
+tbl_modelo3 <- tbl_regression(
     modelo3_psm,
-    exponentiate = TRUE, 
-    label = list(
-    madre_extranjera ~ "Foreign mother",
-    edad ~ "Maternal age",
-    talla ~ "Maternal height",
-    imc_inicial ~ "Initial BMI",
-    ganancia_peso ~ "Gestational weight gain",
-    consumo_tabaco ~ "Smoking",
-    consumo_alcohol ~ "Alcohol consumption",
-    embarazos_anteriores ~ "Previous pregnancies",
-    indice_privacion ~ "Deprivation index",
-    indice_kessner ~ "Kessner index"
-  )
-  )
-
-diagnostico_modelo(modelo3_psm, DA_match)
-```
-
-## 4.4. Modelo 4: Asociación ajustada por adecuación del seguimiento prenatal (índice APNCU)  
-
-```{r}
-modelo4_psm <- glm(
-  macrosomia ~
-    madre_extranjera +
-    edad +
-    imc_inicial +
-    talla + # Ejecutar y si VIF < 3 se queda
-    ganancia_peso + # No sé si incluirla
-    consumo_tabaco +
-    consumo_alcohol +
-    embarazos_anteriores +
-    indice_privacion +
-    indice_apncu,
-  data = DA_match,
-  family = binomial(link = "logit")
-)
-
-summary(modelo4_psm)
-
-obtener_OR(modelo4_psm)
-
-tbl_modelo4_psm <- tbl_regression(
-    modelo4_psm,
     exponentiate = TRUE,
     label = list(
     madre_extranjera ~ "Foreign mother",
-    edad ~ "Maternal age",
-    talla ~ "Maternal height",
-    imc_inicial ~ "Initial BMI",
-    ganancia_peso ~ "Gestational weight gain",
-    consumo_tabaco ~ "Smoking",
-    consumo_alcohol ~ "Alcohol consumption",
-    embarazos_anteriores ~ "Previous pregnancies",
-    indice_privacion ~ "Deprivation index",
     indice_apncu ~ "APNCU index"
   )
   )
 
-diagnostico_modelo(modelo4_psm, DA_match)
-```   
+diagnostico_modelo(modelo3_psm, DA_match)
+```  
   
 # 5. Tabla resumen tras Propensity Score Matching  
 ```{r}
@@ -522,14 +368,12 @@ tabla_modelos_psm <-
     tbls = list(
       tbl_modelo1_psm,
       tbl_modelo2_psm,
-      tbl_modelo3_psm,
-      tbl_modelo4_psm
+      tbl_modelo3_psm
     ),
     tab_spanner = c(
       "**Model 1**",
-      "**Model 2**",
-      "**Model 3 (Kessner)**",
-      "**Model 4 (APNCU)**"
+      "**Model 2 (Kessner)**",
+      "**Model 3 (APNCU)**"
     )
   ) %>%
   bold_labels() %>%
@@ -541,3 +385,4 @@ tabla_modelos_psm
 
 save_table(tabla_modelos_psm, "Table2_PSM_Regression_Models.html")
 ```
+
