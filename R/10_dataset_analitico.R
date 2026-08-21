@@ -687,7 +687,9 @@ DA <- DA %>%
     indice_kessner=factor(indice_kessner, levels = c("Inadecuado", "Intermedio", "Adecuado")),
     indice_apncu=factor(indice_apncu, levels = c("Inadecuado", "Intermedio", "Adecuado")),
     tsi=factor(tsi, levels = c("TSI 000","TSI 001", "TSI 002", "TSI 003", "TSI 004", "TSI 005", "TSI 006")),
-    zbs=factor(zbs, levels=c("UR","RU"))
+    zbs=factor(zbs, levels=c("UR","RU")),
+    lga_p90 = factor(lga_p90, levels = c(0, 1), labels = c("No LGA", "LGA")),
+    lga_p97 = factor(lga_p97, levels = c(0, 1), labels = c("No LGA", "LGA"))
   ) %>% 
   distinct() 
 
