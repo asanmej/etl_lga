@@ -52,34 +52,50 @@ situacion_admin_madre <- read_csv(file.path(PATH_TRANSFORMADOS,"situacion_admin_
 
 #----------------------------------------------------
 
-# 2. Construcción dataset analítico base
+# 2. Construcción dataset analítico base (Centrado en el Recién Nacido / Hijo)
 
-# El dataset base contiene únicamente variables originales procedentes de las
-# entidades del modelo E/R. Las variables derivadas se generan posteriormente
-
-## 2.1. Embarazo
-da_base <- embarazo %>%
+## 2.1. Iniciar el dataset base desde la tabla HIJO
+da_base <- hijo %>%
   select(
+    id_hijo,
     id_embarazo,
-    id_madre,
-    fur,
-    fecha_parto,
-    primera_visita_fecha,
-    edad,
-    peso_inicial,
-    peso_final,
-    ganancia_peso,
-    imc_inicial,
-    imc_final,
-    consumo_tabaco,
-    consumo_alcohol,
-    embarazos_anteriores,
-    abortos_anteriores,
-    nacimientos_anteriores,
-    tipo_parto
+    peso_nacimiento,
+    edad_gestacional_nacimiento,
+    talla_nacimiento,
+    perimetro_craneal,
+    fecha_nacimiento
+  ) %>%
+  mutate(
+    fecha_nacimiento = ymd(fecha_nacimiento)
   )
 
-## 2.2. Madre
+## 2.2. Incorporar la información del Embarazo
+da_base <- da_base %>%
+  left_join(
+    embarazo %>%
+      select(
+        id_embarazo,
+        id_madre,
+        fur,
+        fecha_parto,
+        primera_visita_fecha,
+        edad,
+        peso_inicial,
+        peso_final,
+        ganancia_peso,
+        imc_inicial,
+        imc_final,
+        consumo_tabaco,
+        consumo_alcohol,
+        embarazos_anteriores,
+        abortos_anteriores,
+        nacimientos_anteriores,
+        tipo_parto
+      ),
+    by = "id_embarazo"
+  )
+
+## 2.3. Incorporar la información de la Madre
 da_base <- da_base %>%
   left_join(
     madre %>%
@@ -88,38 +104,10 @@ da_base <- da_base %>%
         nacionalidad,
         talla
       ),
-    by="id_madre"
+    by = "id_madre"
   )
 
-## 2.3. Hijo
-hijo_da <- hijo %>%
-  mutate(
-    # Variable binaria de macrosomía
-    # Se considera macrosomía cuando el peso al nacimiento es >= 4500 g
-    macrosomia = if_else(
-      peso_nacimiento >= 4500,
-      1,
-      0,
-      missing = NA_real_
-    )
-  ) %>%
-  select(
-    id_hijo,
-    id_embarazo,
-    peso_nacimiento,
-    edad_gestacional_nacimiento,
-    talla_nacimiento,
-    perimetro_craneal,
-    macrosomia
-  ) 
-
-da_base <- da_base %>%
-  left_join(
-    hijo_da,
-    by= "id_embarazo"
-  ) 
-
-## 2.4. Uso de servicios
+## 2.4. Incorporar el Uso de Servicios (a nivel de embarazo)
 da_base <- da_base %>%
   left_join(
     uso_servicio %>%
@@ -129,8 +117,8 @@ da_base <- da_base %>%
         n_visitas_hospitalarias,
         n_visitas_atencion_primaria
       ),
-    by="id_embarazo"
-  ) 
+    by = "id_embarazo"
+  )
 
 ## 2.5. Situación administrativa de la madre
 
@@ -149,21 +137,17 @@ situacion_admin <- situacion_admin_madre %>%
     indice_privacion
   )
 
-### Añadimos el año al dataset analítico
+### Añadimos el año al dataset analítico (basado en la FUR del embarazo)
 da_base <- da_base %>%
   mutate(
     anio = year(fur)
   )
 
-### Asociar la información administrativa correspondiente 
-### al año de inicio del embarazo
+### Asociar la información administrativa correspondiente al año de inicio del embarazo
 da_base <- da_base %>%
   left_join(
     situacion_admin,
-    by = c(
-      "id_madre",
-      "anio"
-    )
+    by = c("id_madre", "anio")
   )
 
 ## 2.6. Guardar dataset base (opcional)
@@ -206,12 +190,8 @@ DA <- DA %>%
 DA <- DA %>%
   mutate(
     semanas_primera_visita = round(
-      difftime(
-        primera_visita_fecha,
-        fur,
-        units = "days"
-      )
-    ) / 7, 1
+      as.numeric(difftime(primera_visita_fecha, fur, units = "days")) / 7, 1
+    )
   )
 
 ## 3.2 Inicio precoz del control prenatal
@@ -233,8 +213,11 @@ DA <- DA %>%
 ## 3.3 Número esperado de visitas prenatales (ACOG)
 
 # Variables utilizadas:
-# - semanas_primera_visita
+# - madre_cartilla
 # - edad_gestacional_nacimiento
+
+# Además se empleará madre_cartilla, que contiene una fila por cada
+# visita prenatal registrada.
 
 # Basado en el calendario clásico de seguimiento prenatal recomendado
 # históricamente por el American College of Obstetricians and
@@ -242,49 +225,74 @@ DA <- DA %>%
 #   - hasta semana 28: cada 4 semanas
 #   - semanas 28-36: cada 2 semanas
 #   - desde la 36: semanal
-calcular_visitas_esperadas <- function(sem_inicio, sem_parto){
-  
-  if(is.na(sem_inicio) | is.na(sem_parto))
-    return(NA_real_)
-  
-  if(sem_inicio >= sem_parto)
-    return(0)
-  
-  visitas <- 0
-  
-  # Hasta la semana 28: una visita cada 4 semanas
-  inicio <- sem_inicio
-  fin <- min(sem_parto, 28)
-  
-  if(inicio < fin)
-    visitas <- visitas + (fin - inicio)/4
-  
-  # Entre 28 y 36: una visita cada 2 semanas
-  inicio <- max(sem_inicio, 28)
-  fin <- min(sem_parto, 36)
-  
-  if(inicio < fin)
-    visitas <- visitas + (fin - inicio)/2
-  
-  # Desde la 36 hasta el parto: semanal
-  inicio <- max(sem_inicio, 36)
-  fin <- sem_parto
-  
-  if(inicio < fin)
-    visitas <- visitas + (fin - inicio)
-  
-  return(ceiling(visitas)+1)
-  
-}
 
-DA <- DA %>%
+# Diccionario del calendario ACOG
+diccionario_acog <- tibble(
+  
+  semana_recomendada = c(
+    8, 12, 16, 20, 24, 28,
+    30, 32, 34, 36,
+    37, 38, 39, 40, 41, 42
+  )
+  
+)
+
+# Visitas esperadas según la duración de la gestación
+visitas_esperadas <- DA %>%
+  
   mutate(
-    visitas_esperadas =
-      mapply(
-        calcular_visitas_esperadas,
-        semanas_primera_visita,
-        edad_gestacional_nacimiento
-      )
+    visitas_esperadas = sapply(
+      edad_gestacional_nacimiento,
+      
+      function(sem_parto){
+        if(is.na(sem_parto))
+          return(NA_real_)
+        sum(diccionario_acog$semana_recomendada <= sem_parto)
+      }
+    )
+  ) %>%
+  select(
+    id_embarazo,
+    visitas_esperadas
+  )
+
+# Visitas realizadas que coinciden con el calendario ACOG
+visitas_calendario <- DA %>%
+  select(
+    id_embarazo,
+    id_madre,
+    fur
+  ) %>%
+  left_join(
+    madre_cartilla,
+    by="id_madre"
+  ) %>%
+  filter(
+    !is.na(edad_gestacional_sem)
+  ) %>%
+  group_by(id_embarazo.x) %>%
+  summarise(
+    visitas_realizadas_calendario =
+      sum(
+        sapply(
+          diccionario_acog$semana_recomendada,
+          function(x){
+            any(abs(edad_gestacional_sem-x)<=1)
+          }
+        )
+      ),
+    .groups="drop"
+  )
+
+# Incorporar ambas variables al dataset analítico
+DA <- DA %>%
+  left_join(
+    visitas_esperadas,
+    by="id_embarazo"
+  ) %>%
+  left_join(
+    visitas_calendario,
+    by=c("id_embarazo"="id_embarazo.x")
   )
 
 ## 3.4 Índice de Kessner
@@ -312,68 +320,58 @@ DA <- DA %>%
   )
 
 ### Número mínimo de visitas exigidas por Kessner:
+diccionario_kessner <- tribble(
+  
+  ~edad_gestacional_min,
+  ~edad_gestacional_max,
+  ~visitas_minimas,
+  
+  0,  19, 4,
+  20, 21, 5,
+  22, 23, 6,
+  24, 27, 7,
+  28, 35, 8,
+  36, 45, 9
+)
 
-### Para gestaciones pretérmino el número mínimo de visitas
-### se ajusta proporcionalmente a la duración de la gestación
 DA <- DA %>%
-  mutate(
-    visitas_minimas_kessner = case_when(
-      
-      is.na(edad_gestacional_nacimiento) ~ NA_real_,
-      # Para gestaciones a término (>=36 semanas) se consideran
-      # necesarias al menos 9 visitas prenatales
-      edad_gestacional_nacimiento >= 36 ~ 9,
-      TRUE ~ ceiling(
-        9 * edad_gestacional_nacimiento / 40
-      )
-    )
-  )
+  mutate(eg_int = floor(edad_gestacional_nacimiento)) %>%
+  left_join(
+    diccionario_kessner %>% 
+      rowwise() %>% 
+      reframe(edad_gestacional_nacimiento = seq(edad_gestacional_min, edad_gestacional_max), visitas_minimas_kessner = visitas_minimas),
+    by = "edad_gestacional_nacimiento"
+  ) %>%
+  select(-eg_int)
 
-### Índice
 DA <- DA %>%
   mutate(
     indice_kessner = case_when(
-      
       is.na(trimestre_primera_visita) |
         is.na(n_visitas_embarazo) |
-        is.na(visitas_minimas_kessner) ~ NA_character_,
+        is.na(visitas_minimas_kessner)
+      ~ NA_character_,
       
-      # Adecuado: Primera visita en el primer trimestre 
-      #           y número suficiente de visitas
       trimestre_primera_visita == "Primer trimestre" &
         n_visitas_embarazo >= visitas_minimas_kessner
       ~ "Adecuado",
       
-      # Intermedio: Primera visita en segundo trimestre
-      #             o inicio precoz pero seguimiento insuficiente
-      (trimestre_primera_visita == "Segundo trimestre" |
-         (trimestre_primera_visita == "Primer trimestre" &
-            between(n_visitas_embarazo, 5, visitas_minimas_kessner - 1)
-         )
-      )
+      trimestre_primera_visita == "Segundo trimestre" |
+        (
+          trimestre_primera_visita=="Primer trimestre" &
+            between(
+              n_visitas_embarazo,
+              5,
+              visitas_minimas_kessner-1
+            )
+        )
       ~ "Intermedio",
       
-      # Inadecuado: Inicio en tercer trimestre
-      #             o seguimiento insuficiente
-      TRUE
-      ~ "Inadecuado"
-    ) 
-  ) %>% 
-  select(-visitas_minimas_kessner)
-
-### Factor ordenado
-DA <- DA %>%
-  mutate(
-    indice_kessner = factor(
-      indice_kessner,
-      levels = c(
-        "Inadecuado",
-        "Intermedio",
-        "Adecuado"
-      ),
-      ordered = TRUE
-    )
+      TRUE ~ "Inadecuado"
+    ),
+    indice_kessner = factor(indice_kessner, levels = c("Inadecuado", "Intermedio", "Adecuado"), ordered = TRUE)
   )
+
 
 ## 3.5 Índice APNCU (Adequacy of Prenatal Care Utilization)
 
@@ -391,69 +389,35 @@ DA <- DA %>%
 DA <- DA %>%
   mutate(
     porcentaje_visitas = case_when(
-      is.na(visitas_esperadas) |
-        visitas_esperadas == 0 |
-        is.na(n_visitas_embarazo) ~ NA_real_,
       
-      TRUE ~ 100 * n_visitas_embarazo / visitas_esperadas
-    )
-  )
-
-### Momento de inicio del seguimiento
-DA <- DA %>%
-  mutate(
+      is.na(n_visitas_embarazo) |
+        is.na(visitas_esperadas) |
+        visitas_esperadas == 0 ~
+        NA_real_,
+      
+      TRUE ~
+        100 *
+        n_visitas_embarazo /
+        visitas_esperadas
+    ),
+    ### Momento de inicio del seguimiento
     inicio_apncu = case_when(
       is.na(semanas_primera_visita) ~ NA_character_,
       semanas_primera_visita <= 16 ~ "Precoz",
       TRUE ~ "Tardío"
-    )
-  )
-
-### Clasificación APNCU
-DA <- DA %>%
-  mutate(
+    ),
+    ### Clasificación APNCU
     indice_apncu = case_when(
-      
-      is.na(inicio_apncu) |
-        is.na(porcentaje_visitas) ~ NA_character_,
-      
-      # Inicio después del 4º mes o <50% de las visitas esperadas
-      inicio_apncu == "Tardío" |
-        porcentaje_visitas < 50 ~
-        "Inadecuado",
-      
-      # Inicio precoz y 50–79%
-      inicio_apncu == "Precoz" &
-        between(porcentaje_visitas, 50, 79.999) ~
-        "Intermedio",
-      
-      # Inicio precoz y 80–109%
-      inicio_apncu == "Precoz" &
-        between(porcentaje_visitas, 80, 109.999) ~
-        "Adecuado",
-      
-      # Inicio precoz y ≥110%
-      inicio_apncu == "Precoz" &
-        porcentaje_visitas >= 110 ~
-        "Adecuado Plus"
-    )
-  ) %>%
-  select(-inicio_apncu)
-
-### Factor ordenado
-DA <- DA %>%
-  mutate(
-    indice_apncu = factor(
-      indice_apncu,
-      levels = c(
-        "Inadecuado",
-        "Intermedio",
-        "Adecuado",
-        "Adecuado Plus"
-      ),
-      ordered = TRUE
-    )
-  )
+      is.na(inicio_apncu) | is.na(porcentaje_visitas) ~ NA_character_,
+      inicio_apncu == "Tardío" ~ "Inadecuado",
+      inicio_apncu == "Precoz" & porcentaje_visitas < 50 ~ "Inadecuado",
+      inicio_apncu == "Precoz" & porcentaje_visitas >= 50 & porcentaje_visitas < 80 ~ "Intermedio",
+      inicio_apncu == "Precoz" & porcentaje_visitas >= 80 ~ "Adecuado",
+      TRUE ~ "Inadecuado"
+    ),
+    indice_apncu = factor(indice_apncu, levels = c("Inadecuado", "Intermedio", "Adecuado"), ordered = TRUE)
+  ) %>% 
+  distinct(id_hijo, .keep_all = TRUE)
 
 ## 3.6 Diagnósticos
 
@@ -687,7 +651,7 @@ DA <- DA %>%
     )
   )
 
-# 3.10. Convertir a factor todas las variables binarias/categóricas
+## 3.10. Convertir a factor todas las variables binarias/categóricas
 DA <- DA %>%
   mutate(
     
@@ -709,7 +673,46 @@ DA <- DA %>%
     
     zbs = factor(zbs)
   ) %>% 
-  distinct()
+  distinct()  
+
+## 3.11. Análisis de LGA y Macrosomía  
+
+DA <- DA %>%
+  mutate(
+    # Agrupar los tipos de parto para que coincidan con la tabla maestra ("vaginal" o "cesarea")
+    tipo_parto_agrupado = case_when(
+      tipo_parto %in% c("spontaneous", "induced", "undetermined", "vaginal") ~ "vaginal",
+      tipo_parto == "cesarea" ~ "cesarea",
+      TRUE ~ "vaginal"
+    ),
+    # Definir la paridad con el formato exacto de tu tabla maestra ("primipara" o "multipara")
+    paridad = if_else(nacimientos_anteriores == 0, "primipara", "multipara")
+  )
+
+### UNIÓN CON LA TABLA DE REFERENCIA (gran_tabla_maestra) Y CLASIFICACIÓN
+DA <- DA %>%
+  # Unimos indicando las tres claves correspondientes
+  left_join(
+    gran_tabla_maestra, 
+    by = c(
+      "edad_gestacional_nacimiento" = "semana_gestacional", 
+      "tipo_parto_agrupado" = "tipo_parto", 
+      "paridad" = "paridad"
+    )
+  ) %>%
+  mutate(
+    # Usamos la columna calculada de la media (o puedes cambiarla por p90_chico/p90_chica según el sexo del bebé)
+    lga_p90 = ifelse(peso_nacimiento > p90_promedio, 1, 0),
+    lga_p97 = ifelse(peso_nacimiento > p97_promedio, 1, 0), # Opcional si también quieres el p97
+    
+    # Subanálisis complementario por umbrales absolutos de macrosomía
+    macrosomia_absoluta = case_when(
+      peso_nacimiento > 4500 ~ "> 4500 g",
+      peso_nacimiento >= 4000 & peso_nacimiento <= 4500 ~ "4000 - 4500 g",
+      TRUE ~ "Normopeso / < 4000g"
+    )
+  )
+
 #----------------------------------------------------
 
 # 4. Exportar dataset analítico
