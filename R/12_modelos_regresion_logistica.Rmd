@@ -254,8 +254,8 @@ match_ps <- matchit(
 
   data = DA_psm,
   method = "nearest",
-  ratio = 1, # Porbar con ratio = 2
-  replace = FALSE,
+  ratio = 1, 
+  replace = TRUE,
   caliper = 0.2
 )
 
