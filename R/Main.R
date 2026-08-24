@@ -15,7 +15,7 @@
 # -----------------------------------------------------------------------------
 
 # 1. Configuración del proyecto
-source(file.path(PATH_R, "00_config.R"))
+source("R/00_config.R")
 
 # 2. Construcción de entidades del modelo E/R
 
@@ -47,16 +47,17 @@ source(file.path(PATH_R, "08_build_uso_servicio.R"))
 # 3. Control de calidad
 render(file.path(PATH_R, "09_QA.Rmd"), output_dir = PATH_RESULTS)
 
+# 4. Tabla de LGA
+source(file.path(PATH_R, "LGA_tabla.R"))
 
-# 4. Construcción del dataset analítico
+# 5. Construcción del dataset analítico
 source(file.path(PATH_R, "10_dataset_analitico.R"))
 
 
-# 5. Análisis descriptivo
+# 6. Análisis descriptivo
 render(file.path(PATH_R, "11_analisis_descriptivo_macrosomia.Rmd"), 
        output_dir = PATH_RESULTS)
 
-
-# 6. Modelos de regresión logística
+# 7. Modelos de regresión logística
 render(file.path(PATH_R, "12_modelos_regresion_logistica.Rmd"),
        output_dir = PATH_RESULTS)
