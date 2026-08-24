@@ -514,7 +514,6 @@ diagnosticos_resumen <- diagnostico %>%
       ),
     
     .groups = "drop"
-    
   )
 
 ### Incorporar variables clínicas derivadas al dataset analítico
@@ -525,17 +524,13 @@ DA <- DA %>%
   ) %>%
   mutate(
     # Los embarazos sin ningún diagnóstico compatible se consideran negativos
-    diabetes_gestacional =
-      coalesce(diabetes_gestacional, FALSE),
+    diabetes_gestacional = coalesce(diabetes_gestacional, FALSE),
     
-    hipertension_gestacional =
-      coalesce(hipertension_gestacional, FALSE),
+    hipertension_gestacional = coalesce(hipertension_gestacional, FALSE),
     
-    preeclampsia =
-      coalesce(preeclampsia, FALSE),
+    preeclampsia = coalesce(preeclampsia, FALSE),
     
-    eclampsia =
-      coalesce(eclampsia, FALSE)
+    eclampsia = coalesce(eclampsia, FALSE)
   )
 
 ## 3.7 Ganancia excesiva de peso
@@ -551,24 +546,16 @@ DA <- DA %>%
       
       is.na(imc_inicial) | is.na(ganancia_peso) ~ NA_real_,
       
-      imc_inicial < 18.5 & 
-        ganancia_peso > 18 ~ 1,
+      imc_inicial < 18.5 & ganancia_peso > 18 ~ 1,
       
-      imc_inicial >= 18.5 &
-        imc_inicial < 25 &
-        ganancia_peso > 16 ~ 1,
+      imc_inicial >= 18.5 & imc_inicial < 25 & ganancia_peso > 16 ~ 1,
       
-      imc_inicial >= 25 &
-        imc_inicial < 30 &
-        ganancia_peso > 11.5 ~ 1,
+      imc_inicial >= 25 & imc_inicial < 30 & ganancia_peso > 11.5 ~ 1,
       
-      imc_inicial >= 30 &
-        ganancia_peso > 9 ~ 1,
+      imc_inicial >= 30 & ganancia_peso > 9 ~ 1,
       
       TRUE ~ 0
-      
     )
-    
   )
 
 ## 3.8 Madre extranjera
@@ -649,51 +636,27 @@ DA <- DA %>%
       global_region,
       levels = c("Global North", "Global South")
     )
-  )
+  ) 
 
-## 3.10. Convertir a factor todas las variables binarias/categóricas
-DA <- DA %>%
-  mutate(
-    
-    primera_visita_precoz = factor(primera_visita_precoz,
-                                   levels = c(0,1),
-                                   labels = c("No","Yes")),
-    
-    madre_extranjera = factor(madre_extranjera,
-                              levels = c(0,1),
-                              labels = c("Spain","Foreign")),
-    
-    ganancia_excesiva_peso = factor(ganancia_excesiva_peso,
-                                    levels = c(0,1),
-                                    labels = c("No","Yes")),
-    
-    tipo_parto = factor(tipo_parto),
-    
-    tsi = factor(tsi),
-    
-    zbs = factor(zbs)
-  ) %>% 
-  distinct()  
-
-## 3.11. Análisis de LGA y Macrosomía  
+## 3.10. Análisis de LGA y Macrosomía  
 
 DA <- DA %>%
   mutate(
-    # Agrupar los tipos de parto para que coincidan con la tabla maestra ("vaginal" o "cesarea")
+    # Agrupar los tipos de parto para que coincidan con la tabla_lga ("vaginal" o "cesarea")
     tipo_parto_agrupado = case_when(
       tipo_parto %in% c("spontaneous", "induced", "undetermined", "vaginal") ~ "vaginal",
       tipo_parto == "cesarea" ~ "cesarea",
       TRUE ~ "vaginal"
     ),
-    # Definir la paridad con el formato exacto de tu tabla maestra ("primipara" o "multipara")
+    # Definir la paridad con el formato exacto de la tabla_lga ("primipara" o "multipara")
     paridad = if_else(nacimientos_anteriores == 0, "primipara", "multipara")
   )
 
-### UNIÓN CON LA TABLA DE REFERENCIA (gran_tabla_maestra) Y CLASIFICACIÓN
+### Unión con la tabla de referencia (tabla_lga) Y clasificación
 DA <- DA %>%
   # Unimos indicando las tres claves correspondientes
   left_join(
-    gran_tabla_maestra, 
+    tabla_lga, 
     by = c(
       "edad_gestacional_nacimiento" = "semana_gestacional", 
       "tipo_parto_agrupado" = "tipo_parto", 
@@ -701,9 +664,8 @@ DA <- DA %>%
     )
   ) %>%
   mutate(
-    # Usamos la columna calculada de la media (o puedes cambiarla por p90_chico/p90_chica según el sexo del bebé)
-    lga_p90 = ifelse(peso_nacimiento > p90_promedio, 1, 0),
-    lga_p97 = ifelse(peso_nacimiento > p97_promedio, 1, 0), # Opcional si también quieres el p97
+    # Usamos la columna p97 de la chica para clasificar la macrosomía 
+    lga_p97 = ifelse(peso_nacimiento > p97_chica, 1, 0),
     
     # Subanálisis complementario por umbrales absolutos de macrosomía
     macrosomia_absoluta = case_when(
@@ -712,6 +674,23 @@ DA <- DA %>%
       TRUE ~ "Normopeso / < 4000g"
     )
   )
+
+## 3.10. Convertir a factor todas las variables binarias/categóricas
+DA <- DA %>%
+  mutate(
+    primera_visita_precoz = factor(primera_visita_precoz, levels = c(0,1), labels = c("No","Yes")),
+    madre_extranjera = factor(madre_extranjera, levels = c(0, 1), labels = c("Spain", "Foreign")),
+    ganancia_excesiva_peso = factor(ganancia_excesiva_peso, levels = c(0,1), labels = c("No","Yes")),
+    tipo_parto = factor(tipo_parto),
+    consumo_tabaco=factor(consumo_tabaco, levels=c(0,1)),
+    consumo_alcohol=factor(consumo_alcohol, levels=c(0,1)),
+    indice_kessner=factor(indice_kessner, levels = c("Inadecuado", "Intermedio", "Adecuado")),
+    indice_apncu=factor(indice_apncu, levels = c("Inadecuado", "Intermedio", "Adecuado")),
+    tsi=factor(tsi, levels = c("TSI 000","TSI 001", "TSI 002", "TSI 003", "TSI 004", "TSI 005", "TSI 006")),
+    zbs=factor(zbs, levels=c("UR","RU")),
+    lga_p97 = factor(lga_p97, levels = c(0, 1), labels = c("No LGA", "LGA"))
+  ) %>% 
+  distinct() 
 
 #----------------------------------------------------
 
