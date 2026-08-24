@@ -5,6 +5,10 @@
 
 pkg <- c(
   
+  # 0. Creación tabla de clasificación LGA (parámetros)  
+  ## Extraer contenido de un pdf
+  "pdftools",
+  
   # 1. Creación de entidades (ETL)
   ## Manipulación de datos y joins, manejo de fechas y lectura de archivos csv
   "tidyverse",
@@ -47,21 +51,26 @@ pkg <- c(
 lapply(pkg, function (x){if(!require(x, character.only = T)){install.packages(x , character.only = T)}})
 rm(pkg)
 
-
 ## Directorios
 PATH_PROYECTO <- here()
 
 PATH_DATOS <- file.path(PATH_PROYECTO, "Datos")
 PATH_R <- file.path(PATH_PROYECTO, "R")
 PATH_RESULTS <- file.path(PATH_PROYECTO, "Results")
+PATH_TABLAS <- file.path(PATH_RESULTS, "tablas")
 
 ## Datos transformados
 PATH_TRANSFORMADOS <- file.path(PATH_PROYECTO, "Datos_transformados")
 
+## Parámetros
+PATH_PARAMS <- file.path(PATH_PROYECTO, "Parametros")
+
 ## Crear automáticamente las carpetas de salida si no existen
 dirs <- c(
   PATH_RESULTS,
-  PATH_TRANSFORMADOS
+  PATH_TRANSFORMADOS,
+  PATH_PARAMS,
+  PATH_TABLAS
 )
 
 invisible(
