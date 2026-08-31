@@ -13,6 +13,8 @@
 # 4. Exportar dataset analítico
 # -----------------------------------------------------------------------------
 
+tabla_lga <- read_csv("Parametros/tabla_lga.csv")
+
 # 1. Cargar entidades y limpieza
 
 ## 1.1. EMBARAZO
@@ -226,74 +228,102 @@ DA <- DA %>%
 #   - semanas 28-36: cada 2 semanas
 #   - desde la 36: semanal
 
-# Diccionario del calendario ACOG
-diccionario_acog <- tibble(
-  
-  semana_recomendada = c(
-    8, 12, 16, 20, 24, 28,
-    30, 32, 34, 36,
-    37, 38, 39, 40, 41, 42
-  )
-  
-)
-
 # Visitas esperadas según la duración de la gestación
-visitas_esperadas <- DA %>%
+calcular_visitas_esperadas <- function(
+    semana_inicio,
+    semana_parto
+) {
   
-  mutate(
-    visitas_esperadas = sapply(
-      edad_gestacional_nacimiento,
-      
-      function(sem_parto){
-        if(is.na(sem_parto))
-          return(NA_real_)
-        sum(diccionario_acog$semana_recomendada <= sem_parto)
-      }
-    )
-  ) %>%
-  select(
-    id_embarazo,
-    visitas_esperadas
-  )
+  if (
+    is.na(semana_inicio) |
+    is.na(semana_parto)
+  ) {
+    return(NA_real_)
+  }
+  
+  if (semana_inicio >= semana_parto) {
+    return(0)
+  }
+  
+  visitas <- 0
+  
+  # Desde el inicio hasta la semana 28:
+  # una visita cada 4 semanas
+  inicio <- semana_inicio
+  fin <- min(semana_parto, 28)
+  
+  if (inicio < fin) {
+    visitas <- visitas + (fin - inicio) / 4
+  }
+  
+  # Desde la semana 28 hasta la 36:
+  # una visita cada 2 semanas
+  inicio <- max(semana_inicio, 28)
+  fin <- min(semana_parto, 36)
+  
+  if (inicio < fin) {
+    visitas <- visitas + (fin - inicio) / 2
+  }
+  
+  # Desde la semana 36 hasta el parto:
+  # una visita semanal
+  inicio <- max(semana_inicio, 36)
+  fin <- semana_parto
+  
+  if (inicio < fin) {
+    visitas <- visitas + (fin - inicio)
+  }
+  
+  # Se incluye la visita inicial
+  ceiling(visitas) + 1
+}
 
-# Visitas realizadas que coinciden con el calendario ACOG
-visitas_calendario <- DA %>%
-  select(
-    id_embarazo,
-    id_madre,
-    fur
-  ) %>%
-  left_join(
-    madre_cartilla,
-    by="id_madre"
-  ) %>%
-  filter(
-    !is.na(edad_gestacional_sem)
-  ) %>%
-  group_by(id_embarazo.x) %>%
-  summarise(
-    visitas_realizadas_calendario =
-      sum(
-        sapply(
-          diccionario_acog$semana_recomendada,
-          function(x){
-            any(abs(edad_gestacional_sem-x)<=1)
-          }
-        )
-      ),
-    .groups="drop"
-  )
 
-# Incorporar ambas variables al dataset analítico
 DA <- DA %>%
-  left_join(
-    visitas_esperadas,
-    by="id_embarazo"
-  ) %>%
-  left_join(
-    visitas_calendario,
-    by=c("id_embarazo"="id_embarazo.x")
+  mutate(
+    visitas_esperadas = mapply(
+      calcular_visitas_esperadas,
+      semanas_primera_visita,
+      edad_gestacional_nacimiento
+    )
   )
+
+
+
+
+
+
+
+
+
+
+
+summary(DA$semanas_primera_visita)
+
+DA %>%
+  filter(
+    !is.na(semanas_primera_visita),
+    semanas_primera_visita < 0 |
+      semanas_primera_visita > 45
+  ) %>%
+  select(
+    id_embarazo,
+    fur,
+    primera_visita_fecha,
+    semanas_primera_visita
+  )
+
+
+
+
+
+
+
+
+
+
+
+
 
 ## 3.4 Índice de Kessner
 
@@ -307,17 +337,6 @@ DA <- DA %>%
 # - trimestre de inicio del seguimiento
 # - número de visitas prenatales
 # - edad gestacional al parto
-
-### Trimestre de la primera visita
-DA <- DA %>%
-  mutate(
-    trimestre_primera_visita = case_when(
-      is.na(semanas_primera_visita) ~ NA_character_,
-      semanas_primera_visita <= 13 ~ "Primer trimestre",
-      semanas_primera_visita <= 27 ~ "Segundo trimestre",
-      TRUE ~ "Tercer trimestre"
-    )
-  )
 
 ### Número mínimo de visitas exigidas por Kessner:
 diccionario_kessner <- tribble(
@@ -334,16 +353,36 @@ diccionario_kessner <- tribble(
   36, 45, 9
 )
 
-DA <- DA %>%
-  mutate(eg_int = floor(edad_gestacional_nacimiento)) %>%
-  left_join(
-    diccionario_kessner %>% 
-      rowwise() %>% 
-      reframe(edad_gestacional_nacimiento = seq(edad_gestacional_min, edad_gestacional_max), visitas_minimas_kessner = visitas_minimas),
-    by = "edad_gestacional_nacimiento"
-  ) %>%
-  select(-eg_int)
+### Convertir la edad gestacional a semanas enteras
+diccionario_kessner_expandido <- diccionario_kessner %>%
+  rowwise() %>%
+  reframe(
+    edad_gestacional_nacimiento = seq(
+      edad_gestacional_min,
+      edad_gestacional_max
+    ),
+    visitas_minimas_kessner = visitas_minimas
+  )
 
+DA <- DA %>%
+  mutate(edad_gestacional_kessner = floor(edad_gestacional_nacimiento)) %>%
+  left_join(
+    diccionario_kessner_expandido, 
+    by = "edad_gestacional_nacimiento"
+  )
+
+### Trimestre de la primera visita
+DA <- DA %>%
+  mutate(
+    trimestre_primera_visita = case_when(
+      is.na(semanas_primera_visita) ~ NA_character_,
+      semanas_primera_visita <= 13 ~ "Primer trimestre",
+      semanas_primera_visita <= 27 ~ "Segundo trimestre",
+      TRUE ~ "Tercer trimestre"
+    )
+  )
+
+### Classificación Kessner
 DA <- DA %>%
   mutate(
     indice_kessner = case_when(
@@ -352,26 +391,28 @@ DA <- DA %>%
         is.na(visitas_minimas_kessner)
       ~ NA_character_,
       
+      # Adecuado:
       trimestre_primera_visita == "Primer trimestre" &
         n_visitas_embarazo >= visitas_minimas_kessner
       ~ "Adecuado",
       
-      trimestre_primera_visita == "Segundo trimestre" |
-        (
-          trimestre_primera_visita=="Primer trimestre" &
-            between(
-              n_visitas_embarazo,
-              5,
-              visitas_minimas_kessner-1
-            )
-        )
+      # Intermedio:
+      trimestre_primera_visita == "Segundo trimestre"
       ~ "Intermedio",
       
+      trimestre_primera_visita == "Primer trimestre" &
+        n_visitas_embarazo < visitas_minimas_kessner ~
+        "Intermedio",
+      
+      # Resto = Inadecuado
       TRUE ~ "Inadecuado"
     ),
     indice_kessner = factor(indice_kessner, levels = c("Inadecuado", "Intermedio", "Adecuado"), ordered = TRUE)
+  ) %>%
+  select(
+    -edad_gestacional_kessner,
+    -visitas_minimas_kessner
   )
-
 
 ## 3.5 Índice APNCU (Adequacy of Prenatal Care Utilization)
 
@@ -396,27 +437,26 @@ DA <- DA %>%
         NA_real_,
       
       TRUE ~
-        100 *
-        n_visitas_embarazo /
-        visitas_esperadas
+        100 * n_visitas_embarazo / visitas_esperadas
     ),
     ### Momento de inicio del seguimiento
     inicio_apncu = case_when(
       is.na(semanas_primera_visita) ~ NA_character_,
       semanas_primera_visita <= 16 ~ "Precoz",
-      TRUE ~ "Tardío"
-    ),
+      TRUE ~ "Tardío") ,
     ### Clasificación APNCU
     indice_apncu = case_when(
       is.na(inicio_apncu) | is.na(porcentaje_visitas) ~ NA_character_,
       inicio_apncu == "Tardío" ~ "Inadecuado",
       inicio_apncu == "Precoz" & porcentaje_visitas < 50 ~ "Inadecuado",
       inicio_apncu == "Precoz" & porcentaje_visitas >= 50 & porcentaje_visitas < 80 ~ "Intermedio",
-      inicio_apncu == "Precoz" & porcentaje_visitas >= 80 ~ "Adecuado",
-      TRUE ~ "Inadecuado"
+      inicio_apncu == "Precoz" & porcentaje_visitas >= 80 & porcentaje_visitas < 110~ "Adecuado",
+      inicio_apncu == "Precoz" & porcentaje_visitas >= 110 ~ "Adecuado Plus",
+      TRUE ~ NA_character_
     ),
-    indice_apncu = factor(indice_apncu, levels = c("Inadecuado", "Intermedio", "Adecuado"), ordered = TRUE)
+    indice_apncu = factor(indice_apncu, levels = c("Inadecuado", "Intermedio", "Adecuado", "Adecuado Plus"), ordered = TRUE)
   ) %>% 
+  select(-inicio_apncu) %>%
   distinct(id_hijo, .keep_all = TRUE)
 
 ## 3.6 Diagnósticos
@@ -652,7 +692,7 @@ DA <- DA %>%
     paridad = if_else(nacimientos_anteriores == 0, "primipara", "multipara")
   )
 
-### Unión con la tabla de referencia (tabla_lga) Y clasificación
+### Unión con la tabla de referencia (tabla_lga) Y clasificación por edad gestacional
 DA <- DA %>%
   # Unimos indicando las tres claves correspondientes
   left_join(
@@ -684,11 +724,11 @@ DA <- DA %>%
     tipo_parto = factor(tipo_parto),
     consumo_tabaco=factor(consumo_tabaco, levels=c(0,1)),
     consumo_alcohol=factor(consumo_alcohol, levels=c(0,1)),
-    indice_kessner=factor(indice_kessner, levels = c("Inadecuado", "Intermedio", "Adecuado")),
-    indice_apncu=factor(indice_apncu, levels = c("Inadecuado", "Intermedio", "Adecuado")),
+    indice_kessner=factor(indice_kessner, levels = c("Inadecuado", "Intermedio", "Adecuado"), labels = c("Inadecuado", "Intermedio", "Adecuado")),
+    indice_apncu=factor(indice_apncu, levels = c("Inadecuado", "Intermedio", "Adecuado", "Adecuado Plus"), labels = c("Inadecuado", "Intermedio", "Adecuado", "Adecuado+")),
     tsi=factor(tsi, levels = c("TSI 000","TSI 001", "TSI 002", "TSI 003", "TSI 004", "TSI 005", "TSI 006")),
     zbs=factor(zbs, levels=c("UR","RU")),
-    lga_p97 = factor(lga_p97, levels = c(0, 1), labels = c("No LGA", "LGA"))
+    lga_p97 = factor(lga_p97, levels = c(0, 1))
   ) %>% 
   distinct() 
 
