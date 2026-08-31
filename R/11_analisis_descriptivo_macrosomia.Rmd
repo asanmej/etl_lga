@@ -31,10 +31,21 @@ df <- read_csv(
 # 3. Preparación de datos
 
 ```{r}
-# Pasar el peso del recién nacido de gramos a kg
 df <- df %>%
   mutate(
-    peso_nacimiento = peso_nacimiento / 1000
+    peso_nacimiento = peso_nacimiento / 1000,
+
+    lga_p97 = factor(
+      lga_p97,
+      levels = c(0, 1),
+      labels = c("No LGA", "LGA")
+    ),
+
+    madre_extranjera = factor(
+      madre_extranjera,
+      levels = c("Spain", "Foreign"),
+      labels = c("Spain", "Foreign")
+    )
   )
 ```
 
@@ -119,7 +130,11 @@ tabla1 <- df %>%
     ## Neonatal
     peso_nacimiento,
     talla_nacimiento,
-    perimetro_craneal
+    perimetro_craneal,
+    
+    ## Obstetric history
+    nacimientos_anteriores,
+    abortos_anteriores
   ) %>%
 
   tbl_strata(
@@ -151,7 +166,10 @@ tabla1 <- df %>%
 
           peso_nacimiento ~ "Birth weight (kg)",
           talla_nacimiento ~ "Birth length (cm)",
-          perimetro_craneal ~ "Head circumference (cm)"
+          perimetro_craneal ~ "Head circumference (cm)",
+          
+          nacimientos_anteriores ~ "Previous births",
+          abortos_anteriores ~ "Previous abortions"
         )
 
       ) %>%
@@ -188,6 +206,10 @@ tablaS1 <- df %>%
     ## Pregnancy
     edad_gestacional_nacimiento,
     tipo_parto,
+    
+    ## Obstetric history
+    nacimientos_anteriores,
+    abortos_anteriores,
 
     ## Neonatal
     peso_nacimiento,
@@ -235,6 +257,9 @@ tablaS1 <- df %>%
 
       edad_gestacional_nacimiento ~ "Gestational age at birth (weeks)",
       tipo_parto ~ "Mode of delivery",
+      
+      nacimientos_anteriores ~ "Previous births",
+      abortos_anteriores ~ "Previous abortions",
 
       peso_nacimiento ~ "Birth weight (kg)",
       talla_nacimiento ~ "Birth length (cm)",
@@ -267,7 +292,10 @@ tablaS1 <- df %>%
 
       dplyr::add_row(label = "Pregnancy", row_type = "label", 
                      .before = which(.$variable == "edad_gestacional_nacimiento")) %>%
-
+      
+      dplyr::add_row(label = "Obstetric history", row_type = "label",
+                     .before = which(.$variable == "edad_gestacional_nacimiento")) %>%
+      
       dplyr::add_row(label = "Neonatal characteristics", row_type = "label",
                      .before = which(.$variable == "peso_nacimiento")) %>%
 
@@ -314,7 +342,11 @@ tabla2 <- df %>%
     ## Neonatal
     peso_nacimiento,
     talla_nacimiento,
-    perimetro_craneal
+    perimetro_craneal,
+    
+    ## Obstetric history
+    nacimientos_anteriores,
+    abortos_anteriores
   ) %>%
 
   tbl_strata(
@@ -346,7 +378,10 @@ tabla2 <- df %>%
 
           peso_nacimiento ~ "Birth weight (kg)",
           talla_nacimiento ~ "Birth length (cm)",
-          perimetro_craneal ~ "Head circumference (cm)"
+          perimetro_craneal ~ "Head circumference (cm)",
+          
+          nacimientos_anteriores ~ "Previous births",
+          abortos_anteriores ~ "Previous abortions",
         )
 
       ) %>%
