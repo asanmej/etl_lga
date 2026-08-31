@@ -14,8 +14,41 @@
 # 1. Los objetos hijo_neosoft y hijo_demograficos se generan en 
 #    02_reconstruccion_embarazos.R y la entidad embarazo en
 #    03_build_embarazo.R
+embarazos_aux <- read_delim(
+  file.path(PATH_DATOS_INTERMEDIOS, "embarazos_aux.csv"),
+  delim = "|",
+  escape_double = FALSE,
+  trim_ws = TRUE
+)
 
-# 2. Limpieza en 02_reconstruccion_embarazos.R
+hijo_neosoft <- read_delim(FILE_HIJO_NEOSOFT, 
+                           delim = "|", escape_double = FALSE, trim_ws = TRUE)
+
+hijo_demograficos <- read_delim(FILE_HIJO_DEMOGRAFICOS, 
+                                delim = "|", escape_double = FALSE, trim_ws = TRUE)
+
+# 2. Limpieza y filtrado inicial
+embarazos_aux <- embarazos_aux %>%
+  mutate(
+    fecha_inicio_embarazo = as.Date(fecha_inicio_embarazo),
+    primera_visita_fecha = as.Date(primera_visita_fecha),
+    ultima_visita_fecha = as.Date(ultima_visita_fecha),
+    fecha_parto = as.Date(fecha_parto),
+    fur = as.Date(fur)
+  )
+
+hijo_demograficos <- hijo_demograficos %>%  
+  clean_names() %>% # Convertir a formato estandar: minúsculas, sin tildes ni espacios
+  distinct() %>% # Eliminar duplicados
+  filter(!is.na(ano_nac) & !is.na(mes_nac))
+
+hijo_neosoft <- hijo_neosoft %>%
+  clean_names() %>% # Convertir a formato estandar: minúsculas, sin tildes ni espacios
+  distinct() %>% # Eliminar duplicados
+  inner_join(
+    hijo_demograficos,
+    by = "patient_id"
+  )
 
 # 3. Seleccionar los atributos principales que definen la entidad HIJO
 hijo <- hijo_neosoft %>%
