@@ -51,15 +51,40 @@ ultimo_no_na <- function(x){
 }
 
 # 1. Cargar datos
-## madre_cartilla e hijo_neosoft cargados y filtrados en 01_build_madre.R
+madre_cartilla <- read_delim(FILE_MADRE_CARTILLA, 
+                             delim = "|", escape_double = FALSE, trim_ws = TRUE)
+
+hijo_neosoft <- read_delim(FILE_HIJO_NEOSOFT, 
+                           delim = "|", escape_double = FALSE, trim_ws = TRUE)
+
+hijo_demograficos <- read_delim(FILE_HIJO_DEMOGRAFICOS, 
+                                delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
 # 2. Limpieza y filtrado inicial
+hijo_demograficos <- hijo_demograficos %>%  
+  clean_names() %>% # Convertir a formato estandar: minúsculas, sin tildes ni espacios
+  distinct() %>% # Eliminar duplicados
+  filter(!is.na(ano_nac) & !is.na(mes_nac))
+
+hijo_neosoft <- hijo_neosoft %>%
+  clean_names() %>% # Convertir a formato estandar: minúsculas, sin tildes ni espacios
+  distinct() %>% # Eliminar duplicados
+  inner_join(
+    hijo_demograficos,
+    by = "patient_id"
+  )
+
 madre_cartilla <- madre_cartilla %>%  
+  clean_names() %>% # Convertir a formato estandar: minúsculas, sin tildes ni espacios
+  distinct() %>% # Eliminar duplicados
   mutate(
     # Conversión de variables de fecha a formato Date
     fecha_visita = as.Date(fecha_visita, format = "%d/%m/%Y"),
     fur = as.Date(fur, format = "%d/%m/%Y")
-  )
+  )  %>%
+  # Conservar únicamente las madres con al menos un recién nacido
+  # registrado en NeoSoft
+  filter(patient_id %in% hijo_neosoft$mother_patient_id)
 
 # 3. Procesar la edad gestacional y estimar la fecha de inicio del embarazo
 
@@ -73,9 +98,9 @@ madre_cartilla <- madre_cartilla %>%
     
     edad_gestacional = str_replace_all(edad_gestacional, ",", "."),
     
-    edad_gestacional = str_replace_all(edad_gestacional, "día|días|dpp", "dias"),
+    edad_gestacional = str_replace_all(edad_gestacional, "días|día|dpp", "dias"),
     
-    edad_gestacional = str_replace_all(edad_gestacional, "semana|semanas|s.g", "sem"),
+    edad_gestacional = str_replace_all(edad_gestacional, "semanas|semana|s.g", "sem"),
     
     edad_gestacional = str_squish(edad_gestacional),
     
@@ -116,28 +141,46 @@ madre_cartilla <- madre_cartilla %>%
   )
 
 # 4. Reconstruir embarazos agrupando las visitas prenatales
+
+# Máxima distancia entre visitas consecutivas para considerar
+# que pueden pertenecer al mismo embarazo
+DIAS_ROLL_FORWARD <- 90
+
 madre_cartilla <- madre_cartilla %>%
   # Ordenar las visitas de cada madre según la fecha de inicio del embarazo
   arrange(
     patient_id,
-    fecha_inicio_estimada
+    fecha_visita
   ) %>%
   group_by(patient_id) %>%
   mutate(
-    diferencia_inicio = as.numeric(
-      fecha_inicio_estimada - lag(fecha_inicio_estimada)
+    # Diferencia entre visitas consecutivas de la misma madre
+    diferencia_visitas = as.numeric(
+      fecha_visita - lag(fecha_visita)
     ),
-    # Se considera que dos visitas pertenecen a embarazos distintos cuando
-    # la diferencia entre las fechas estimadas de inicio supera 28 días.
-    # Este margen evita dividir un mismo embarazo debido a pequeñas
-    # imprecisiones en la estimación de la edad gestacional
-    nuevo_embarazo = row_number() == 1 | diferencia_inicio > 28,
+    # Una nueva gestación comienza cuando:
+    # - es la primera visita de la madre, o
+    # - han pasado más de 90 días desde la visita anterior
+    nuevo_embarazo = row_number() == 1 |
+      diferencia_visitas > DIAS_ROLL_FORWARD,
     
-    # Identificador temporal utilizado únicamente durante la reconstrucción
-    # de los embarazos a partir de las visitas prenatales
-    id_embarazo = cumsum(nuevo_embarazo)
+    # Identificador temporal del embarazo
+    id_embarazo = cumsum(nuevo_embarazo)) %>%
+  ungroup() %>%
+  # El roll forward se realiza dentro de cada embarazo,
+  # no dentro de toda la madre
+  group_by(
+    patient_id,
+    id_embarazo
   ) %>%
-  ungroup() 
+  mutate(
+    # Fecha de inicio estimada utilizada para representar
+    # el embarazo reconstruido
+    fecha_inicio_roll_forward = primer_no_na(
+      fecha_inicio_estimada
+    )
+  ) %>%
+  ungroup()
 
 # 5. Crear una tabla con un registro por embarazo
 
@@ -148,19 +191,34 @@ embarazos_aux <- madre_cartilla %>%
     id_embarazo
   ) %>%
   summarise(
-    fecha_inicio_embarazo =
-      as.Date(
-        # Se utiliza la mediana para reducir el efecto de estimaciones
-        # extremas derivadas de errores en la edad gestacional registrada
-        median(as.numeric(fecha_inicio_estimada), na.rm = TRUE),
-        origin = "1970-01-01"
-      ),
+    # Se utiliza la fecha de inicio obtenida mediante roll forward
+    fecha_inicio_embarazo = primer_no_na(fecha_inicio_roll_forward),
     primera_visita_fecha = min(fecha_visita, na.rm = TRUE),
     ultima_visita_fecha = max(fecha_visita, na.rm = TRUE),
     n_visitas_embarazo = n(),
     fur = primer_no_na(fur),
     .groups = "drop"
   )
+
+# 5.1. Eliminar embarazos sin fecha de inicio estimada
+
+# Número de embarazos reconstruidos antes del filtro
+n_embarazos_antes <- nrow(embarazos_aux)
+
+# Se eliminan los embarazos para los que no ha sido posible obtener
+# una fecha de inicio estimada
+embarazos_aux <- embarazos_aux %>%
+  filter(!is.na(fecha_inicio_embarazo))
+
+# Número de embarazos después del filtro
+n_embarazos_despues <- nrow(embarazos_aux)
+
+# Mostrar el efecto del filtro
+cat(
+  "Embarazos antes del filtro:", n_embarazos_antes, "\n",
+  "Embarazos después del filtro:", n_embarazos_despues, "\n",
+  "Embarazos eliminados:", n_embarazos_antes - n_embarazos_despues, "\n"
+)
 
 # 6. Ordenar embarazos
 
@@ -352,7 +410,8 @@ for(i in seq_along(lista_madres)){
         ),
       by="fecha_parto"
     )
-  asignaciones[[i]] <- emb
+  asignaciones[[i]] <- emb %>%
+    filter(!is.na(fecha_parto), !is.na(id_hijo))
 }
 
 # Unificar los resultados obtenidos para todas las madres
@@ -421,3 +480,35 @@ embarazos_aux <- embarazos_aux %>%
     -duracion_fur,
     -duracion_inicio
   )
+
+# 9.1. Determinar la FUR definitiva en madre_cartilla 
+madre_cartilla <- madre_cartilla %>%
+  select(-fur) %>%
+  left_join(
+    embarazos_aux %>%
+      select(
+        id_madre,
+        orden_embarazo,
+        fur
+      ),
+    by = c(
+      "id_madre",
+      "orden_embarazo"
+    )
+  )
+
+# 10. Guardar tablas intermedias para scripts posteriores
+
+write_delim(
+  madre_cartilla,
+  file.path(PATH_DATOS_INTERMEDIOS, "madre_cartilla_procesada.csv"),
+  delim = "|",
+  na = ""
+)
+
+write_delim(
+  embarazos_aux,
+  file.path(PATH_DATOS_INTERMEDIOS, "embarazos_aux.csv"),
+  delim = "|",
+  na = ""
+)
