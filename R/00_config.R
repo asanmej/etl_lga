@@ -55,6 +55,7 @@ rm(pkg)
 PATH_PROYECTO <- here()
 
 PATH_DATOS <- file.path(PATH_PROYECTO, "Datos")
+PATH_DATOS_INTERMEDIOS <- file.path(PATH_PROYECTO, "Datos_intermedios")
 PATH_R <- file.path(PATH_PROYECTO, "R")
 PATH_RESULTS <- file.path(PATH_PROYECTO, "Results")
 PATH_TABLAS <- file.path(PATH_RESULTS, "tablas")
@@ -69,6 +70,7 @@ PATH_PARAMS <- file.path(PATH_PROYECTO, "Parametros")
 dirs <- c(
   PATH_RESULTS,
   PATH_TRANSFORMADOS,
+  PATH_DATOS_INTERMEDIOS,
   PATH_PARAMS,
   PATH_TABLAS
 )
