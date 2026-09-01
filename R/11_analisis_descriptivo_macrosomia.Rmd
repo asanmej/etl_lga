@@ -31,10 +31,21 @@ df <- read_csv(
 # 3. Preparación de datos
 
 ```{r}
-# Pasar el peso del recién nacido de gramos a kg
 df <- df %>%
   mutate(
-    peso_nacimiento = peso_nacimiento / 1000
+    peso_nacimiento = peso_nacimiento / 1000,
+
+    lga_p97 = factor(
+      lga_p97,
+      levels = c(0, 1),
+      labels = c("No LGA", "LGA")
+    ),
+
+    madre_extranjera = factor(
+      madre_extranjera,
+      levels = c("Spain", "Foreign"),
+      labels = c("Spain", "Foreign")
+    )
   )
 ```
 
@@ -83,17 +94,13 @@ tabla_estilo_strata <- function(tabla){
 ## 3.3. Función para guardar las tablas  
 ```{r}
 save_table <- function(tbl, filename){
-
+  # Usamos file.path para unir la ruta con el nombre del archivo de forma limpia
+  archivo_completo <- file.path(PATH_TABLAS, filename)
+  
   tbl %>%
     as_gt() %>%
-    gt::gtsave(
-      paste0(
-        "Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Results/tablas/",
-        filename
-      )
-    )
-
-}
+    gt::gtsave(archivo_completo)
+  }
 ```  
   
 ## 4. Tablas  
@@ -105,7 +112,7 @@ tabla1 <- df %>%
   select(
 
     madre_extranjera,
-    macrosomia,
+    lga_p97,
 
     ## Maternal characteristics
     edad,
@@ -123,7 +130,11 @@ tabla1 <- df %>%
     ## Neonatal
     peso_nacimiento,
     talla_nacimiento,
-    perimetro_craneal
+    perimetro_craneal,
+    
+    ## Obstetric history
+    nacimientos_anteriores,
+    abortos_anteriores
   ) %>%
 
   tbl_strata(
@@ -131,7 +142,7 @@ tabla1 <- df %>%
     .tbl_fun = ~ .x %>%
 
       tbl_summary(
-        by = macrosomia,
+        by = lga_p97,
         missing = "no",
         percent = "column",
 
@@ -155,7 +166,10 @@ tabla1 <- df %>%
 
           peso_nacimiento ~ "Birth weight (kg)",
           talla_nacimiento ~ "Birth length (cm)",
-          perimetro_craneal ~ "Head circumference (cm)"
+          perimetro_craneal ~ "Head circumference (cm)",
+          
+          nacimientos_anteriores ~ "Previous births",
+          abortos_anteriores ~ "Previous abortions"
         )
 
       ) %>%
@@ -192,6 +206,10 @@ tablaS1 <- df %>%
     ## Pregnancy
     edad_gestacional_nacimiento,
     tipo_parto,
+    
+    ## Obstetric history
+    nacimientos_anteriores,
+    abortos_anteriores,
 
     ## Neonatal
     peso_nacimiento,
@@ -239,6 +257,9 @@ tablaS1 <- df %>%
 
       edad_gestacional_nacimiento ~ "Gestational age at birth (weeks)",
       tipo_parto ~ "Mode of delivery",
+      
+      nacimientos_anteriores ~ "Previous births",
+      abortos_anteriores ~ "Previous abortions",
 
       peso_nacimiento ~ "Birth weight (kg)",
       talla_nacimiento ~ "Birth length (cm)",
@@ -266,22 +287,25 @@ tablaS1 <- df %>%
   modify_table_body(
     ~ .x %>%
 
-      dplyr::add_row(label = "**Maternal characteristics**", 
+      dplyr::add_row(label = "Maternal characteristics", 
                      row_type = "label", .before = 1) %>%
 
-      dplyr::add_row(label = "**Pregnancy**", row_type = "label", 
+      dplyr::add_row(label = "Pregnancy", row_type = "label", 
                      .before = which(.$variable == "edad_gestacional_nacimiento")) %>%
-
-      dplyr::add_row(label = "**Neonatal characteristics**", row_type = "label",
+      
+      dplyr::add_row(label = "Obstetric history", row_type = "label",
+                     .before = which(.$variable == "edad_gestacional_nacimiento")) %>%
+      
+      dplyr::add_row(label = "Neonatal characteristics", row_type = "label",
                      .before = which(.$variable == "peso_nacimiento")) %>%
 
-      dplyr::add_row(label = "**Maternal comorbidities**", row_type = "label",
+      dplyr::add_row(label = "Maternal comorbidities", row_type = "label",
                      .before = which(.$variable == "diabetes_gestacional")) %>%
 
-      dplyr::add_row(label = "**Prenatal care adequacy**", row_type = "label",
+      dplyr::add_row(label = "Prenatal care adequacy", row_type = "label",
                      .before = which(.$variable == "semanas_primera_visita")) %>%
 
-      dplyr::add_row(label = "**Healthcare utilisation**", row_type = "label",
+      dplyr::add_row(label = "Healthcare utilisation", row_type = "label",
                      .before = which(.$variable == "n_visitas_atencion_primaria"))
   ) %>%
 
@@ -300,7 +324,7 @@ tabla2 <- df %>%
   select(
 
     global_region,
-    macrosomia,
+    lga_p97,
 
     ## Maternal characteristics
     edad,
@@ -318,7 +342,11 @@ tabla2 <- df %>%
     ## Neonatal
     peso_nacimiento,
     talla_nacimiento,
-    perimetro_craneal
+    perimetro_craneal,
+    
+    ## Obstetric history
+    nacimientos_anteriores,
+    abortos_anteriores
   ) %>%
 
   tbl_strata(
@@ -326,7 +354,7 @@ tabla2 <- df %>%
     .tbl_fun = ~ .x %>%
 
       tbl_summary(
-        by = macrosomia,
+        by = lga_p97,
         missing = "no",
         percent = "column",
 
@@ -350,7 +378,10 @@ tabla2 <- df %>%
 
           peso_nacimiento ~ "Birth weight (kg)",
           talla_nacimiento ~ "Birth length (cm)",
-          perimetro_craneal ~ "Head circumference (cm)"
+          perimetro_craneal ~ "Head circumference (cm)",
+          
+          nacimientos_anteriores ~ "Previous births",
+          abortos_anteriores ~ "Previous abortions",
         )
 
       ) %>%
@@ -360,7 +391,7 @@ tabla2 <- df %>%
   ) %>%
 
   modify_caption(
-    "**Table 2. Baseline characteristics according to gloval region (Global North vs Global South) and LGA status. Values are presented as Median (Q1, Q3) or n (%).**" 
+    "**Table 2. Baseline characteristics according to global region (Global North vs Global South) and LGA status. Values are presented as Median (Q1, Q3) or n (%).**" 
   )
 
 tabla2
@@ -373,7 +404,7 @@ save_table(tabla2, "Table2_Global_Region_LGA.html")
 ```{r}
 tabla3 <- df %>%
   select(
-    macrosomia,
+    lga_p97,
     diabetes_gestacional,
     hipertension_gestacional,
     preeclampsia,
@@ -381,7 +412,7 @@ tabla3 <- df %>%
   ) %>%
 
   tbl_summary(
-    by = macrosomia,
+    by = lga_p97,
     missing = "no",
     percent = "column",
 
@@ -410,7 +441,7 @@ save_table(tabla3, "Table3_Maternal_Diagnoses.html")
 tabla4 <- df %>%
   select(
     madre_extranjera ,
-    macrosomia,
+    lga_p97,
     
     ## Prenatal follow-up
     n_visitas_embarazo,
@@ -425,7 +456,7 @@ tabla4 <- df %>%
     .tbl_fun = ~ .x %>%
 
       tbl_summary(
-        by = macrosomia,
+        by = lga_p97,
         missing = "no",
         percent = "column",
         statistic = list(
@@ -459,11 +490,11 @@ tabla4
 save_table(tabla4, "Table4_Prenatal_Follow_Up.html")
 ```
 
-## 4.5. Tabla 5: Adequacy of prenatal care according to neonatal macrosomia.
+## 4.5. Tabla 5: Adequacy of prenatal care according to neonatal LGA.
 ```{r}
 tabla5 <- df %>%
   select(
-    macrosomia,
+    lga_p97,
     semanas_primera_visita,
     primera_visita_precoz,
     n_visitas_embarazo,
@@ -474,7 +505,7 @@ tabla5 <- df %>%
   ) %>%
 
   tbl_summary(
-    by = macrosomia,
+    by = lga_p97,
     missing = "no",
     percent = "column",
 
@@ -499,24 +530,27 @@ tabla5 <- df %>%
   modify_table_body(
     ~ .x %>%
       dplyr::add_row(
-        label = "**Timing of prenatal care**",row_type = "label",
+        label = "Timing of prenatal care",row_type = "label",
         .before = which(.$variable == "semanas_primera_visita")
       ) %>%
       dplyr::add_row(
-        label = "**Adequacy of prenatal care**",row_type = "label",
+        label = "Adequacy of prenatal care",row_type = "label",
         .before = which(.$variable == "n_visitas_embarazo")
       )
     ) %>%
   
   modify_caption(
-    "**Table 5. Adequacy of prenatal care according to neonatal macrosomia. Values are presented as Median (Q1, Q3) or n (%).**"
+    "**Table 5. Adequacy of prenatal care according to neonatal LGA. Values are presented as Median (Q1, Q3) or n (%).**"
   )
 
 tabla5
 
 save_table(tabla5, "Table5_Prenatal_Care_Adequacy.html")
 ```  
-  
+   
+    
+     
+      
 ---  
   
 # Tablas alternativas   
@@ -656,22 +690,6 @@ tabla_estilo_strata <- function(tabla){
 }
 ```  
   
-## 5.3. Función para guardar las tablas  
-```{r}
-save_table <- function(tbl, filename){
-
-  tbl %>%
-    as_gt() %>%
-    gt::gtsave(
-      paste0(
-        "Y:/PROYECTOS/2024 Salud perinatal (Luis-Aída-Sol)/Desarrollo/Datos/Results/tablas/",
-        filename
-      )
-    )
-
-}
-```  
-  
 ## 6. Tablas  
   
 ## 6.1. Tabla 1: Overall characteristics according to LGA.
@@ -722,7 +740,7 @@ tabla1 <- df %>%
       consumo_tabaco ~ "Smoking during pregnancy",
       consumo_alcohol ~ "Alcohol consumption during pregnancy",
       tipo_parto ~ "Mode of delivery",
-      peso_nacimiento ~ "Birth weight (g)",
+      peso_nacimiento ~ "Birth weight (Kg)",
       talla_nacimiento ~ "Birth length (cm)",
       perimetro_craneal ~ "Head circumference (cm)",
       edad_gestacional_nacimiento ~ "Gestational age at birth (weeks)",
@@ -807,7 +825,7 @@ tabla2 <- df %>%
           edad_gestacional_nacimiento ~ "Gestational age at birth (weeks)",
           tipo_parto ~ "Mode of delivery",
 
-          peso_nacimiento ~ "Birth weight (g)",
+          peso_nacimiento ~ "Birth weight (Kg)",
           talla_nacimiento ~ "Birth length (cm)",
           perimetro_craneal ~ "Head circumference (cm)",
           muerte_neonatal ~ "Neonatal death"
@@ -893,7 +911,7 @@ tabla3 <- df %>%
           edad_gestacional_nacimiento ~ "Gestational age at birth (weeks)",
           tipo_parto ~ "Mode of delivery",
 
-          peso_nacimiento ~ "Birth weight (g)",
+          peso_nacimiento ~ "Birth weight (Kg)",
           talla_nacimiento ~ "Birth length (cm)",
           perimetro_craneal ~ "Head circumference (cm)",
           muerte_neonatal ~ "Neonatal death"
