@@ -1,0 +1,653 @@
+---
+title: "Modelos de regresión logística y análisis de sensibilidad"
+author: "Inés García de la Peña Marco"
+date: "`r Sys.Date()`"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    number_sections: true
+---
+# 0. Importación del dataset de análisis  
+```{r}
+DA <- read_csv(
+  file.path(PATH_TRANSFORMADOS,"dataset_analitico.csv")
+  )
+```  
+  
+# 1. Funciones  
+  
+## 1.1. Función para obtener OR  
+```{r}
+## Odds Ratio (OR)
+# La OR representa el cambio multiplicativo en las odds de macrosomía
+# asociado a un incremento de una unidad en la variable explicativa
+# (o respecto a la categoría de referencia en variables categóricas).
+
+obtener_OR <- function(modelo){
+  
+  IC <- confint.default(modelo) 
+  
+  exp(
+    cbind(
+      OR = coef(modelo),
+      confint(modelo)
+    )
+  )
+}
+```  
+  
+## 1.2. Función para diagnostical el modelo  
+```{r}
+diagnostico_modelo <- function(modelo, datos){
+
+  # Pseudo R: medida del rendimiento global del modelo (permite comparar modelos)
+  # Ej: modelo 1: R=0.12 y modelo 2: R=0.18 --> El modelo 2 ha mejorado
+  cat("\n-----------------------------\n")
+  cat("Pseudo R^2\n")
+  # Comprobamos si el modelo tiene pesos para evitar el error de longitudes
+  if (is.null(modelo$prior.weights)) {
+    print(pscl::pR2(modelo))
+  } else {
+    message("Nota: Pseudo R^2 omitido automáticamente debido al uso de pesos (PSM).")
+  }
+
+  # Hosmer-Lemeshow: Comprueba si las probabilidades predichas por el 
+  # modelo se parecen a las observadas (test de calibración).
+  # Ej: Ho: El modelo ajusta bien --> Si p>0.05 el modelo es bueno
+  if (is.null(modelo$prior.weights)) {
+    cat("\n-----------------------------\n")
+    cat("Hosmer-Lemeshow\n")
+    print(
+      ResourceSelection::hoslem.test(
+        modelo$y,
+        fitted(modelo),
+        g = 5
+      )
+    )
+  }
+
+  # ROC: Mide la capacidad del modelo para distinguir correctamente 
+  # entre individuos con y sin el evento.
+  # El AUC varía entre 0.5 (sin capacidad discriminativa)
+  # y 1 (discriminación perfecta).
+  cat("\n-----------------------------\n")
+  cat("ROC\n")
+  roc_modelo <- pROC::roc(
+    response = modelo$y,
+    predictor = fitted(modelo)
+  )
+  print(roc_modelo)
+  plot(roc_modelo)
+}
+```
+
+
+# 2. Modelos de regresión  
+  
+**Estrategia de modelización:**  
+Se construyeron cuatro modelos de regresión logística de forma jerárquica.  
+- El **Modelo 1** estimó la asociación cruda entre el origen materno y la macrosomía neonatal. 
+- El **Modelo 2** ajustó dicha asociación por potenciales factores de confusión maternos. 
+- Finalmente, los **Modelos 3 y 4** incorporaron dos medidas alternativas de adecuación del seguimiento prenatal (índices de Kessner y APNCU) con el fin de evaluar la robustez de la asociación observada.
+  
+
+## 2.1. Modelo 1: Asociación entre origen materno y macrosomía 
+**Objetivo:** Evaluar si existe una asociación entre el origen materno y el riesgo de macrosomía.
+  
+**Variable dependiente:** macrosomia (0/1)  
+**Variable independiente:** madre_extranjera  
+  
+```{r}
+modelo1 <- glm(
+  lga_p97 ~ madre_extranjera,
+  data = DA,
+  family = "binomial", 
+  y=TRUE
+)
+
+tbl_regression(modelo1, exponentiate = T)
+
+obtener_OR(modelo1)
+
+tbl_modelo1 <- tbl_regression(
+    modelo1,
+    exponentiate = TRUE,
+    label = list(
+    madre_extranjera ~ "Foreign mother"
+  )
+  )
+
+diagnostico_modelo(modelo1, DA)
+```  
+  
+## 2.2. Modelo 2: Asociación ajustada por adecuación del seguimiento prenatal (índice de Kessner)
+**Objetivo:** Evaluar si la asociación entre el origen materno y la macrosomía persiste tras considerar la adecuación del seguimiento prenatal medida mediante el índice de Kessner.  
+  
+```{r}
+modelo2 <- glm(
+  lga_p97 ~ madre_extranjera + indice_kessner,
+  data = DA,
+  family = "binomial",
+  y=TRUE
+)
+
+summary(modelo2)
+
+obtener_OR(modelo2)
+
+tbl_modelo2 <- tbl_regression(
+    modelo2,
+    exponentiate = TRUE,
+    label = list(
+    madre_extranjera ~ "Foreign mother",
+    indice_kessner ~ "Kessner index"
+  )
+  )
+
+diagnostico_modelo(modelo2, DA)
+```  
+  
+## 2.3. Modelo 3: Asociación ajustada por adecuación del seguimiento prenatal (índice APNCU)  
+**Objetivo:** Confirmar la robustez de los resultados utilizando una medida alternativa de adecuación del seguimiento prenatal (índice APNCU)  
+```{r}
+modelo3 <- glm(
+  lga_p97 ~ madre_extranjera + indice_apncu,
+  data = DA,
+  family = "binomial",
+  y=TRUE
+)
+
+summary(modelo3)
+
+obtener_OR(modelo3)
+
+tbl_modelo3 <- tbl_regression(
+    modelo3,
+    exponentiate = TRUE,
+    label = list(
+    madre_extranjera ~ "Foreign mother",
+    indice_apncu ~ "APNCU index"
+  )
+  )
+
+diagnostico_modelo(modelo3, DA)
+
+```  
+  
+# 3. Tabla resumen  
+```{r}
+tabla_modelos <- tbl_merge(
+  tbls = list(
+    tbl_modelo1,
+    tbl_modelo2,
+    tbl_modelo3
+  ),
+  tab_spanner = c(
+    "**Model 1**",
+    "**Model 2 (Kessner)**",
+    "**Model 3 (APNCU)**"
+  )
+) %>%
+  bold_labels() %>%
+  modify_caption(
+    "**Table 1. Odds ratios (OR) and 95% confidence intervals from logistic regression models evaluating the association between maternal origin and neonatal LGA.**"
+  )
+
+tabla_modelos
+
+#save_table(tabla_modelos, "Table1_Regression_Models.html")
+```
+
+# 4. Análisis de sensibilidad mediante Propensity Score Matching 
+ 
+Con el objetivo de evaluar la robustez de los resultados obtenidos en el análisis principal y reducir el posible efecto de confusión derivado de las diferencias basales entre madres españolas y extranjeras, se realizó un análisis de sensibilidad mediante Propensity Score Matching (PSM).
+
+El propensity score se estimó mediante un modelo de regresión logística que incluía únicamente variables basales disponibles antes o al inicio del embarazo.   
+  
+```{r}
+# 1. Seleccionar variables
+DA_psm <- DA %>%
+  select(
+    madre_extranjera,
+    edad,
+    imc_inicial,
+    nacimientos_anteriores,
+    abortos_anteriores,
+    tsi,
+    zbs,
+    n_visitas_embarazo,
+   
+    # Variables que necesitaremos después
+    everything()
+  )
+
+# 2. Divide the match into 2 groups:
+#    - One has complete variables : edad, tsi and zbs
+#    - The others contain NA values
+DA_psm <- DA_psm %>%
+  mutate(
+    madre_extranjera = if_else(madre_extranjera == "Spain", 0, 1),
+    tsi= as.numeric(sub("TSI","", tsi)),
+    
+    imc_missing = if_else(is.na(imc_inicial), 1, 0),
+    imc_inicial_match = if_else(
+      is.na(imc_inicial),
+      median(imc_inicial, na.rm = TRUE),
+      imc_inicial)
+  ) 
+
+# GRUPO 1: Extranjeras COMPLETAS + TODAS las Españolas que sean COMPLETAS
+DA_psm_completo <- DA_psm %>%
+  filter(!is.na(tsi), !is.na(zbs), !is.na(edad))
+
+# GRUPO 2: Extranjeras con NA + TODAS LAS ESPAÑOLAS DE LA BASE DE DATOS
+# De esta forma, las extranjeras con NA pueden elegir cualquier control español
+DA_psm_NA <- DA_psm %>%
+  filter(
+    (madre_extranjera == 1 & (is.na(tsi) | is.na(zbs) | !is.na(edad))) |
+    (madre_extranjera == 0 & !is.na(edad))                             
+  )
+```
+
+  
+## 4.1. PRUEBA 1:
+  
+```{r}
+# 3. Propensity Score Matching
+## Match for the complete group 
+match_ps <- matchit(
+  madre_extranjera ~
+    edad +
+    imc_inicial_match +
+    imc_missing +
+    nacimientos_anteriores +
+    abortos_anteriores +
+    tsi +
+    zbs,
+
+  data = DA_psm_completo,
+  method = "nearest",
+  ratio = 1,
+  replace = TRUE,
+  caliper = c(
+    edad = 3,
+    imc_inicial_match = 3,
+    nacimientos_anteriores = 1,
+    abortos_anteriores = 1,
+    tsi = 1
+  ),
+  std.caliper = FALSE)
+
+## 
+match_ps_NA <- matchit(
+  madre_extranjera ~
+    edad +
+    imc_inicial_match +
+    imc_missing +
+    nacimientos_anteriores +
+    abortos_anteriores,
+
+  data = DA_psm_NA,
+  method = "nearest",
+  ratio = 1,
+  replace = TRUE,
+  caliper = c(
+    edad = 3,
+    imc_inicial_match = 3,
+    nacimientos_anteriores = 1,
+    abortos_anteriores = 1
+  ),
+  std.caliper = FALSE)
+
+# 4.1. Extraer los datos con get_matches() para el primer grupo (Completo)
+df_match_completo <- get_matches(match_ps) %>% 
+  mutate(
+    # Convertimos subclass a número
+    subclass = as.numeric(as.character(subclass)),
+    grupo_match = "Completo"
+  )
+
+# 4.2. Encontrar el ID máximo asignado en el primer grupo
+max_id_primer_match <- max(df_match_completo$subclass, na.rm = TRUE)
+
+# 4.3. Extraer los datos para el segundo grupo (Con NAs) sumando el desplazamiento
+df_match_na <- get_matches(match_ps_NA) %>% 
+  mutate(
+    # Sumamos el desfase para que los IDs empiecen justo después del primer grupo
+    subclass = as.numeric(as.character(subclass)) + max_id_primer_match,
+    grupo_match = "Con_NA"
+  )
+
+# 4.4. Unir ambos datasets en uno solo con IDs correlativos y continuos
+match_ps_mix <- bind_rows(df_match_completo, df_match_na)
+
+saveRDS(
+  match_ps_mix,
+  file.path(PATH_DATOS_INTERMEDIOS, "match_ps.rds")
+)
+
+# 5. Balance de covariables
+balance <- bal.tab(match_ps)
+balance
+
+love.plot(
+  match_ps,
+  threshold = 0.1,
+  abs = TRUE,
+  var.order = "unadjusted"
+)
+
+# 6. Extraer cohorte emparejada
+DA_match <- match_ps_mix
+
+# 7. Comprobar tamaño final
+table(DA_match$madre_extranjera)
+nrow(DA_match)
+
+# 8. Guardar la cohorte emparejada
+write_csv(
+  DA_match,
+  file.path(PATH_DATOS_INTERMEDIOS, "dataset_matched.csv")
+)
+```
+
+### 4.1.1. Modelo 1: Asociación entre origen materno y macrosomía 
+ 
+```{r}
+modelo1_psm <- survival::clogit(
+  lga_p97 ~ madre_extranjera + strata(subclass),
+  data = DA_match,
+  weights= DA_match$weights,
+  y=TRUE
+)
+
+summary(modelo1_psm)
+
+obtener_OR(modelo1_psm)
+
+tbl_modelo1_psm <- tbl_regression(
+    modelo1_psm,
+    exponentiate = TRUE,
+    label = list(
+    madre_extranjera ~ "Foreign mother"
+  )
+  )
+```   
+  
+### 4.1.2. Modelo 2: Asociación ajustada por adecuación del seguimiento prenatal (índice de Kessner)  
+  
+```{r}
+modelo2_psm <- survival::clogit(
+  lga_p97 ~ madre_extranjera + indice_kessner + strata(subclass),
+  data = DA_match,
+  weights= DA_match$weights,
+  y=TRUE
+)
+
+summary(modelo2_psm)
+
+obtener_OR(modelo2_psm)
+
+tbl_modelo2_psm <- tbl_regression(
+    modelo2_psm,
+    exponentiate = TRUE,
+    label = list(
+    madre_extranjera ~ "Foreign mother",
+    indice_kessner ~ "Kessner index"
+  )
+  )
+```  
+  
+## 4.1.3. Modelo 3: Asociación ajustada por adecuación del seguimiento prenatal (índice de APNCU)   
+  
+```{r}
+modelo3_psm <- survival::clogit(
+  lga_p97 ~ madre_extranjera + indice_apncu + strata(subclass),
+  data = DA_match,
+  weights= DA_match$weights,
+  y=TRUE
+)
+
+summary(modelo3_psm)
+
+obtener_OR(modelo3_psm)
+
+tbl_modelo3_psm <- tbl_regression(
+    modelo3_psm,
+    exponentiate = TRUE,
+    label = list(
+    madre_extranjera ~ "Foreign mother",
+    indice_apncu ~ "APNCU index"
+  )
+  )
+``` 
+  
+## 4.2. PRUEBA 2:  
+  
+Se ha añadido `n_visitas_embarazo` para el match.
+  
+```{r}
+# 3. Propensity Score Matching
+## Match for the complete group 
+match_ps <- matchit(
+  madre_extranjera ~
+    n_visitas_embarazo +
+    edad +
+    imc_inicial_match +
+    imc_missing +
+    nacimientos_anteriores +
+    abortos_anteriores +
+    tsi +
+    zbs,
+
+  data = DA_psm_completo,
+  method = "nearest",
+  ratio = 1,
+  replace = TRUE,
+  caliper = c(
+    edad = 3,
+    imc_inicial_match = 3,
+    nacimientos_anteriores = 1,
+    abortos_anteriores = 1,
+    tsi = 1,
+    n_visitas_embarazo = 2
+  ),
+  std.caliper = FALSE)
+
+## 
+match_ps_NA <- matchit(
+  madre_extranjera ~
+    n_visitas_embarazo +
+    edad +
+    imc_inicial_match +
+    imc_missing +
+    nacimientos_anteriores +
+    abortos_anteriores,
+
+  data = DA_psm_NA,
+  method = "nearest",
+  ratio = 1,
+  replace = TRUE,
+  caliper = c(
+    edad = 3,
+    imc_inicial_match = 3,
+    nacimientos_anteriores = 1,
+    abortos_anteriores = 1,
+    n_visitas_embarazo = 2
+  ),
+  std.caliper = FALSE)
+
+# 4.1. Extraer los datos con get_matches() para el primer grupo (Completo)
+df_match_completo <- get_matches(match_ps) %>% 
+  mutate(
+    # Convertimos subclass a número
+    subclass = as.numeric(as.character(subclass)),
+    grupo_match = "Completo"
+  )
+
+# 4.2. Encontrar el ID máximo asignado en el primer grupo
+max_id_primer_match <- max(df_match_completo$subclass, na.rm = TRUE)
+
+# 4.3. Extraer los datos para el segundo grupo (Con NAs) sumando el desplazamiento
+df_match_na <- get_matches(match_ps_NA) %>% 
+  mutate(
+    # Sumamos el desfase para que los IDs empiecen justo después del primer grupo
+    subclass = as.numeric(as.character(subclass)) + max_id_primer_match,
+    grupo_match = "Con_NA"
+  )
+
+# 4.4. Unir ambos datasets en uno solo con IDs correlativos y continuos
+match_ps_mix <- bind_rows(df_match_completo, df_match_na)
+
+saveRDS(
+  match_ps_mix,
+  file.path(PATH_DATOS_INTERMEDIOS, "match_ps.rds")
+)
+
+# 5. Balance de covariables
+balance <- bal.tab(match_ps)
+balance
+
+love.plot(
+  match_ps,
+  threshold = 0.1,
+  abs = TRUE,
+  var.order = "unadjusted"
+)
+
+# 6. Extraer cohorte emparejada
+DA_match <- match_ps_mix
+
+# 7. Comprobar tamaño final
+table(DA_match$madre_extranjera)
+nrow(DA_match)
+
+# 8. Guardar la cohorte emparejada
+write_csv(
+  DA_match,
+  file.path(PATH_DATOS_INTERMEDIOS, "dataset_matched.csv")
+)
+```
+
+### 4.2.1. Modelo 1: Asociación entre origen materno y macrosomía 
+ 
+```{r}
+modelo1_psm_2 <- survival::clogit(
+  lga_p97 ~ madre_extranjera + strata(subclass),
+  data = DA_match,
+  weights= DA_match$weights,
+  y=TRUE
+)
+
+summary(modelo1_psm_2)
+
+obtener_OR(modelo1_psm_2)
+
+tbl_modelo1_psm_2 <- tbl_regression(
+    modelo1_psm_2,
+    exponentiate = TRUE,
+    label = list(
+    madre_extranjera ~ "Foreign mother"
+  )
+  )
+```   
+  
+## 4.2.2. Modelo 2: Asociación ajustada por adecuación del seguimiento prenatal (índice de Kessner)  
+  
+```{r}
+modelo2_psm_2 <- survival::clogit(
+  lga_p97 ~ madre_extranjera + indice_kessner + strata(subclass),
+  data = DA_match,
+  weights= DA_match$weights,
+  y=TRUE
+)
+
+summary(modelo2_psm_2)
+
+obtener_OR(modelo2_psm_2)
+
+tbl_modelo2_psm_2 <- tbl_regression(
+    modelo2_psm_2,
+    exponentiate = TRUE,
+    label = list(
+    madre_extranjera ~ "Foreign mother",
+    indice_kessner ~ "Kessner index"
+  )
+  )
+```
+ 
+## 4.2.3. Modelo 3: Asociación ajustada por adecuación del seguimiento prenatal (índice de APNCU)   
+  
+```{r}
+modelo3_psm_2 <- survival::clogit(
+  lga_p97 ~ madre_extranjera + indice_apncu + strata(subclass),
+  data = DA_match,
+  weights= DA_match$weights,
+  y=TRUE
+)
+
+summary(modelo3_psm_2)
+
+obtener_OR(modelo3_psm_2)
+
+tbl_modelo3_psm_2<- tbl_regression(
+    modelo3_psm_2,
+    exponentiate = TRUE,
+    label = list(
+    madre_extranjera ~ "Foreign mother",
+    indice_apncu ~ "APNCU index"
+  )
+  )
+```  
+  
+# 5. Tabla resumen tras Propensity Score Matching  
+```{r}
+# PRUEBA 1
+tabla_modelos_psm <-
+  tbl_merge(
+    tbls = list(
+      tbl_modelo1_psm,
+      tbl_modelo2_psm,
+      tbl_modelo3_psm
+    ),
+    tab_spanner = c(
+      "**Model 1**",
+      "**Model 2 (Kessner)**",
+      "**Model 3 (APNCU)**"
+    )
+  ) %>%
+  bold_labels() %>%
+  modify_caption(
+    "**Table 3. Odds ratios (OR) and 95% confidence intervals from logistic regression models after Propensity Score Matching evaluating the association between maternal origin and neonatal LGA.**"
+  )
+
+tabla_modelos_psm
+
+#save_table(tabla_modelos_psm, "Table2_PSM_Regression_Models.html")
+```  
+  
+```{r}
+# PRUEBA 2
+tabla_modelos_psm_2 <-
+  tbl_merge(
+    tbls = list(
+      tbl_modelo1_psm_2,
+      tbl_modelo2_psm_2,
+      tbl_modelo3_psm_2
+    ),
+    tab_spanner = c(
+      "**Model 1**",
+      "**Model 2 (Kessner)**",
+      "**Model 3 (APNCU)**"
+    )
+  ) %>%
+  bold_labels() %>%
+  modify_caption(
+    "**Table 4. Odds ratios (OR) and 95% confidence intervals from logistic regression models after Propensity Score Matching evaluating the association between maternal origin and neonatal LGA.**"
+  )
+
+tabla_modelos_psm_2
+
+#save_table
+
