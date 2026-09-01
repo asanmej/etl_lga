@@ -17,8 +17,15 @@ madre_diag_omi <- read_delim(FILE_MADRE_DIAG_OMI,
 madre_diag_cmbd <- read_delim(FILE_MADRE_DIAG_CMBD,
                               delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
+madre_cartilla <- read_delim(
+  file.path(PATH_DATOS_INTERMEDIOS, "madre_cartilla_procesada.csv"),
+  delim = "|",
+  escape_double = FALSE,
+  trim_ws = TRUE
+)
+
 # 2. Limpieza y filtrado de los datos
-#
+
 # Se conservan únicamente los registros correspondientes a las madres
 # presentes en la entidad MADRE, garantizando la coherencia entre entidades
 madre_diag_cmbd <- madre_diag_cmbd %>%
@@ -36,6 +43,14 @@ madre_diag_omi <- madre_diag_omi %>%
   semi_join(
     madre %>% select(id_madre),
     by = c("patient_id"="id_madre")
+  )
+
+madre_cartilla <- madre_cartilla %>%
+  mutate(
+    fecha_visita = as.Date(fecha_visita),
+    fur = as.Date(fur),
+    fecha_inicio_estimada = as.Date(fecha_inicio_estimada),
+    fecha_inicio_roll_forward = as.Date(fecha_inicio_roll_forward)
   )
 
 # 3. Calcular el número de visitas de atención primaria por embarazo:
@@ -102,35 +117,12 @@ uso_servicio <- embarazos_aux %>%
     by = "id_embarazo"
   )
 
-# 6. Calcular el número de visitas registradas en la cartilla obstétrica
+# 6. Añadir el número de visitas registradas en la cartilla obstétrica
 #    para cada embarazo:
-#
-# Cada registro de la cartilla corresponde a una visita obstétrica.
-# La tabla madre_cartilla ya ha sido cargada y depurada en
-# 02_reconstruccion_embarazos.R, por lo que se reutiliza directamente
-visitas_embarazo <- madre_cartilla %>%
-  distinct(id_madre, fur, fecha_visita) %>%
-  left_join(
-    embarazos_aux %>%
-      select(
-        id_embarazo,
-        id_madre,
-        fur
-      ),
-    by = c(
-      "id_madre",
-      "fur"
-    )
-  ) %>%
-  group_by(id_embarazo) %>%
-  summarise(
-    n_visitas_embarazo = n(),
-    .groups = "drop"
-  )
-
 uso_servicio <- uso_servicio %>%
   left_join(
-    visitas_embarazo,
+    embarazos_aux %>%
+      select(id_embarazo, n_visitas_embarazo),
     by = "id_embarazo"
   )
 
