@@ -32,16 +32,44 @@
 # -----------------------------------------------------------------------------
 
 # 1. Importar los datos principales
+madre_cartilla <- read_delim(
+  file.path(PATH_DATOS_INTERMEDIOS, "madre_cartilla_procesada.csv"),
+  delim = "|",
+  escape_double = FALSE,
+  trim_ws = TRUE
+)
 
-# Los objetos madre_cartilla, hijo_neosoft e hijo_demograficos
-# proceden de 01_build_madre.R y son utilizados nuevamente tras la
-# reconstrucción realizada en 02_reconstruccion_embarazos.R
+embarazos_aux <- read_delim(
+  file.path(PATH_DATOS_INTERMEDIOS, "embarazos_aux.csv"),
+  delim = "|",
+  escape_double = FALSE,
+  trim_ws = TRUE
+)
+
+madre <- read_delim(file.path(PATH_TRANSFORMADOS, "madre.csv"))
 
 # Información clínica complementaria procedente de DGP
 madre_dgp <- read_delim(FILE_MADRE_DGP,
                         delim = "|", escape_double = FALSE, trim_ws = TRUE)
 
 # 2. Limpieza y filtrado inicial
+madre_cartilla <- madre_cartilla %>%
+  mutate(
+    fecha_visita = as.Date(fecha_visita),
+    fur = as.Date(fur),
+    fecha_inicio_estimada = as.Date(fecha_inicio_estimada),
+    fecha_inicio_roll_forward = as.Date(fecha_inicio_roll_forward)
+  )
+
+embarazos_aux <- embarazos_aux %>%
+  mutate(
+    fecha_inicio_embarazo = as.Date(fecha_inicio_embarazo),
+    primera_visita_fecha = as.Date(primera_visita_fecha),
+    ultima_visita_fecha = as.Date(ultima_visita_fecha),
+    fecha_parto = as.Date(fecha_parto),
+    fur = as.Date(fur)
+  )
+
 madre_dgp <- madre_dgp %>%
   clean_names() %>%
   distinct() %>%
@@ -145,6 +173,13 @@ embarazos_aux <- embarazos_aux %>%
       "orden_embarazo"
     )
   )
+
+write_delim(
+  embarazos_aux,
+  file.path(PATH_DATOS_INTERMEDIOS, "embarazos_aux.csv"),
+  delim = "|",
+  na = ""
+)
 
 # Eliminamos los embarazos que no tienen fecha de parto
 embarazo <- embarazo %>%
